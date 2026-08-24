@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Auto République - Connexion</title>
+<meta name="theme-color" content="#0f1115">
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--line:#2b313d;--text:#f5f7fb;--muted:#9ca6b8;--accent:#ffb800}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 70% 10%,#282719,#0f1115 46%);color:var(--text);font-family:Inter,system-ui,sans-serif;display:grid;place-items:center;padding:18px}
+.wrap{width:min(980px,100%);display:grid;grid-template-columns:1.15fr .85fr;gap:20px}.hero,.auth{background:rgba(23,26,33,.94);border:1px solid var(--line);border-radius:22px;padding:28px}
+.logo{width:64px;height:64px;border-radius:18px;background:var(--accent);color:#111;display:grid;place-items:center;font-size:25px;font-weight:900}
+h1{font-size:42px;line-height:1;margin:18px 0 12px}p{color:var(--muted);line-height:1.55}.stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:28px}.stats strong{font-size:22px;display:block}.tabs{display:flex;gap:8px;margin-bottom:18px}.tabs button{flex:1}.tabs button.active{background:var(--accent);color:#111}
+button,input{font:inherit;border-radius:10px;padding:11px 12px}button{border:1px solid var(--line);background:#222833;color:white;cursor:pointer;font-weight:800}input{width:100%;background:#101319;color:white;border:1px solid var(--line);margin:5px 0 12px}.submit{width:100%;background:var(--accent);color:#111;border:0}.msg{min-height:24px;margin-top:10px;color:#ff8d8d}.small{font-size:12px}
+@media(max-width:760px){.wrap{grid-template-columns:1fr}.hero{padding:22px}.auth{padding:22px}h1{font-size:34px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<section class="hero">
+<div class="logo">AR</div>
+<h1>Auto République</h1>
+<p>Construis ton empire automobile dans une économie communautaire avec entreprises, banques, politique, presse et justice.</p>
+<div class="stats"><div><strong>250 000 €</strong><span>capital de départ</span></div><div><strong>2 mondes</strong><span>Bêta + Monde 1</span></div><div><strong>100 Gold</strong><span>bienvenue</span></div></div>
+</section>
+<section class="auth">
+<div class="tabs"><button id="tabLogin" class="active">Connexion</button><button id="tabRegister">Créer un compte</button></div>
+<form id="loginForm">
+<label>Pseudo ou e-mail</label><input name="login" required autocomplete="username">
+<label>Mot de passe</label><input type="password" name="password" required autocomplete="current-password">
+<button class="submit">Se connecter</button>
+</form>
+<form id="registerForm" hidden>
+<label>Pseudo</label><input name="username" minlength="3" maxlength="24" required autocomplete="username">
+<label>E-mail</label><input type="email" name="email" required autocomplete="email">
+<label>Mot de passe</label><input type="password" name="password" minlength="10" required autocomplete="new-password">
+<p class="small">10 caractères minimum. Le mot de passe est haché avec Argon2id côté serveur.</p>
+<button class="submit">Créer mon compte</button>
+</form>
+<div class="msg" id="msg"></div>
+</section>
+</div>
+<script>
+const API=location.hostname==="localhost"?"http://localhost:3000":"";
+const login=document.getElementById("loginForm"),reg=document.getElementById("registerForm"),msg=document.getElementById("msg");
+function tabs(which){login.hidden=which!=="login";reg.hidden=which!=="register";tabLogin.classList.toggle("active",which==="login");tabRegister.classList.toggle("active",which==="register");msg.textContent=""}
+tabLogin.onclick=()=>tabs("login");tabRegister.onclick=()=>tabs("register");
+async function send(url,data){
+ const r=await fetch(API+url,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify(data)});
+ const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.error||"Erreur"); return j;
+}
+login.onsubmit=async e=>{e.preventDefault();msg.textContent="Connexion...";try{await send("/api/auth/login",Object.fromEntries(new FormData(login)));location.href="game.html"}catch(x){msg.textContent=x.message}}
+reg.onsubmit=async e=>{e.preventDefault();msg.textContent="Création...";try{await send("/api/auth/register",Object.fromEntries(new FormData(reg)));location.href="game.html"}catch(x){msg.textContent=x.message}}
+</script>
+</body></html>

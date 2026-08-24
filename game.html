@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1115" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <title>Auto République</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">AR</div>
+      <div>
+        <h1>Auto République</h1>
+        <small>Monde communautaire automobile</small>
+      </div>
+    </div>
+
+    <nav id="nav">
+      <button class="nav-btn active" data-page="dashboard">🏠 Tableau de bord</button>
+      <button class="nav-btn" data-page="market">🚗 Marché</button>
+      <button class="nav-btn" data-page="garage">🔧 Mon garage</button>
+      <button class="nav-btn" data-page="territory">🌍 Territoires</button>
+      <button class="nav-btn" data-page="bank">🏦 Banque</button>
+      <button class="nav-btn" data-page="companies">🏢 Entreprises</button>
+      <button class="nav-btn" data-page="industry">🏭 Industrie</button>
+      <button class="nav-btn" data-page="insurance">🛡️ Assurances</button>
+      <button class="nav-btn" data-page="logistics">🚛 Logistique</button>
+      <button class="nav-btn" data-page="exchange">📈 Bourse</button>
+      <button class="nav-btn" data-page="materials">⛏️ Matières</button>
+      <button class="nav-btn" data-page="payroll">👷 Salaires</button>
+      <button class="nav-btn" data-page="taxes">🧾 Fiscalité</button>
+      <button class="nav-btn" data-page="tenders">🏛️ Marchés publics</button>
+      <button class="nav-btn" data-page="economy">🌍 Économie territoriale</button>
+      <button class="nav-btn" data-page="bankruptcy">📉 Faillites</button>
+      <button class="nav-btn" data-page="shop">🪙 Boutique Gold</button>
+      <button class="nav-btn" data-page="politics">🏛️ Politique</button>
+      <button class="nav-btn" data-page="press">📰 Presse</button>
+      <button class="nav-btn" data-page="justice">⚖️ Justice</button>
+      <button class="nav-btn" data-page="contracts">📑 Contrats</button>
+      <button class="nav-btn" data-page="enforcement">🔨 Huissier</button>
+      <button class="nav-btn" data-page="auctions">🔨 Enchères judiciaires</button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="profile-mini">
+        <div class="avatar">C</div>
+        <div>
+          <strong>Curly</strong>
+          <small>Entrepreneur automobile</small>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="mobile-nav" id="mobileNav">
+    <button data-page="dashboard">🏠<span>Accueil</span></button>
+    <button data-page="market">🚗<span>Marché</span></button>
+    <button data-page="garage">🔧<span>Garage</span></button>
+    <button data-page="bank">🏦<span>Banque</span></button>
+    <button data-page="more">☰<span>Plus</span></button>
+  </div>
+
+  <main>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" id="worldEyebrow">MONDE BÊTA • FRANCE</p>
+        <h2 id="page-title">Tableau de bord</h2>
+      </div>
+      <div class="top-actions">
+        <select id="worldSelect" class="world-select" aria-label="Choisir le monde">
+          <option value="beta">🧪 Monde Bêta</option>
+          <option value="world1">🌍 Monde 1</option>
+        </select>
+        <div class="pill">💶 <span id="cashTop">25 000 €</span></div>
+        <div class="pill">⭐ Réputation <span id="repTop">12</span></div>
+        <div class="pill gold-pill">🪙 <span id="goldTop">100</span> Gold</div>
+        <button class="primary" id="nextDay">Passer au jour suivant</button>
+      </div>
+    </header>
+
+    
+<div class="world3d-shell">
+  <div class="world3d-copy">
+    <p class="eyebrow">CENTRE AUTOMOBILE 3D</p>
+    <h3 id="sceneTitle">Dijon • Garage central</h3>
+    <p class="muted">Ton empire prend forme dans un environnement automobile vivant.</p>
+    <div class="scene-stats">
+      <div><strong id="serverCash3d">250 000 €</strong><span>Trésorerie serveur</span></div>
+      <div><strong id="garageCount3d">0</strong><span>Véhicules</span></div>
+      <div><strong id="worldName3d">Monde Bêta</strong><span>Monde actif</span></div>
+    </div>
+  </div>
+  <div id="threeScene" class="three-scene" aria-label="Scène 3D automobile"></div>
+</div>
+
+<section id="app"></section>
+  </main>
+
+  <div id="toast"></div>
+
+  <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      navigator.serviceWorker.register("./sw.js");
+    }
+  </script>
+
+<script>
+(async()=>{
+  try{
+    const API=location.hostname==="localhost"?"http://localhost:3000":"";
+    let r=await fetch(API+"/api/me",{credentials:"include"});
+    if(r.status===401){
+      const rr=await fetch(API+"/api/auth/refresh",{method:"POST",credentials:"include"});
+      if(rr.ok) r=await fetch(API+"/api/me",{credentials:"include"});
+    }
+    if(!r.ok) location.replace("index.html");
+    else{
+      const me=await r.json();
+      window.SERVER_PROFILE=me;
+      const cash=document.getElementById("cashTop");
+      const gold=document.getElementById("goldTop");
+      if(cash) cash.textContent=new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(me.wallet.euros);
+      if(gold) gold.textContent=me.wallet.gold;
+    }
+  }catch{ location.replace("index.html"); }
+})();
+</script>
+
+
+<script type="module">
+const rootApi = location.hostname === "localhost" ? "http://localhost:3000" : "";
+const activeWorld = () => localStorage.getItem("autoRepCurrentWorld") || "beta";
+
+async function api(path, options={}){
+  let r=await fetch(rootApi+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(rootApi+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok) r=await fetch(rootApi+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(data.error||"Erreur serveur");
+  return data;
+}
+function eur(n){return new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n)||0)}
+
+async function syncServerProfile(){
+  try{
+    const me=await api("/api/me");
+    window.SERVER_PROFILE=me;
+    const cash=document.getElementById("cashTop"), gold=document.getElementById("goldTop"), cash3d=document.getElementById("serverCash3d");
+    if(cash) cash.textContent=eur(me.wallet.euros);
+    if(gold) gold.textContent=me.wallet.gold;
+    if(cash3d) cash3d.textContent=eur(me.wallet.euros);
+    const world=activeWorld();
+    const wp=me.worlds.find(w=>w.world_id===world);
+    if(wp){
+      document.getElementById("sceneTitle").textContent=`${wp.city} • Garage central`;
+      document.getElementById("worldName3d").textContent=world==="beta"?"Monde Bêta":"Monde 1";
+    }
+  }catch(e){console.warn(e);}
+}
+async function refreshServerGarage(){
+  try{
+    const data=await api(`/api/world/${activeWorld()}/garage`);
+    const el=document.getElementById("garageCount3d");
+    if(el) el.textContent=data.vehicles.length;
+  }catch(e){console.warn(e);}
+}
+window.buyServerListing=async function(id){
+  try{
+    const r=await api(`/api/world/${activeWorld()}/market/${id}/buy`,{method:"POST"});
+    toast(`${r.name} acheté pour ${eur(r.price)}.`);
+    await syncServerProfile();await refreshServerGarage();await window.renderServerMarket();
+  }catch(e){toast(e.message);}
+}
+window.renderServerMarket=async function(){
+  const pageBtn=document.querySelector('.nav-btn[data-page="market"]');
+  if(!pageBtn?.classList.contains("active")) return;
+  try{
+    const data=await api(`/api/world/${activeWorld()}/market`);
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="card">
+      <div class="section-title"><h3>Marché multijoueur</h3><span class="server-badge">● Serveur autoritaire</span></div>
+      <table><thead><tr><th>Véhicule</th><th>Année</th><th>Km</th><th>État</th><th>Vendeur</th><th>Prix</th><th></th></tr></thead>
+      <tbody>${data.listings.map(v=>`<tr>
+        <td><strong>${v.make} ${v.model}</strong><br><span class="muted">Véhicule #${v.vehicle_id}</span></td>
+        <td>${v.year}</td><td>${Number(v.mileage).toLocaleString("fr-FR")}</td><td>${v.condition}%</td>
+        <td>${v.seller}</td><td>${eur(v.price)}</td>
+        <td><button class="primary" onclick="buyServerListing(${v.listing_id})">Acheter</button></td>
+      </tr>`).join("")}</tbody></table></div>`;
+  }catch(e){toast(e.message);}
+}
+window.renderServerGarage=async function(){
+  const pageBtn=document.querySelector('.nav-btn[data-page="garage"]');
+  if(!pageBtn?.classList.contains("active")) return;
+  try{
+    const data=await api(`/api/world/${activeWorld()}/garage`);
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="grid cols-2"><div class="card">
+      <div class="section-title"><h3>Mon garage serveur</h3><span class="server-badge">● Données protégées</span></div>
+      ${data.vehicles.length?data.vehicles.map(v=>`<div class="vehicle"><div><strong>${v.make} ${v.model}</strong>
+      <span class="muted">${v.year} • ${Number(v.mileage).toLocaleString("fr-FR")} km • ${v.status}</span>
+      <div class="progress"><span style="width:${v.condition}%"></span></div>
+      <small class="muted">État ${v.condition}% • Valeur ${eur(v.estimated_value)}</small></div>
+      <button class="secondary" data-list="${v.id}">Mettre en vente</button></div>`).join(""):`<p class="muted">Aucun véhicule.</p>`}
+      </div><div class="card"><h3>Transactions sécurisées</h3><p class="muted">Les achats sont exécutés dans une transaction PostgreSQL. Le prix est débité du portefeuille serveur, le vendeur est crédité, le véhicule change de propriétaire et l'historique est écrit avant validation.</p></div></div>`;
+    app.querySelectorAll("[data-list]").forEach(btn=>btn.addEventListener("click",async()=>{
+      const price=Number(prompt("Prix de vente en € :","10000"));
+      if(!Number.isInteger(price)||price<500) return toast("Prix invalide.");
+      try{await api(`/api/world/${activeWorld()}/garage/${btn.dataset.list}/list`,{method:"POST",body:JSON.stringify({price})});toast("Véhicule mis en vente.");await window.renderServerGarage();}catch(e){toast(e.message);}
+    }));
+  }catch(e){toast(e.message);}
+}
+
+document.querySelectorAll('.nav-btn[data-page="market"]').forEach(b=>b.addEventListener("click",()=>setTimeout(window.renderServerMarket,0)));
+document.querySelectorAll('.nav-btn[data-page="garage"]').forEach(b=>b.addEventListener("click",()=>setTimeout(window.renderServerGarage,0)));
+document.getElementById("worldSelect")?.addEventListener("change",()=>{setTimeout(()=>{syncServerProfile();refreshServerGarage();},0)});
+
+await syncServerProfile();
+await refreshServerGarage();
+
+// 3D scene: generated geometry only, no external model asset.
+const sceneRoot=document.getElementById("threeScene");
+if(sceneRoot){
+  try{
+    const THREE=await import("https://cdn.jsdelivr.net/npm/three@0.171.0/build/three.module.js/+esm");
+    const scene=new THREE.Scene();
+    scene.background=new THREE.Color(0x111722);
+    scene.fog=new THREE.Fog(0x111722,8,25);
+    const camera=new THREE.PerspectiveCamera(42,1,.1,100);
+    camera.position.set(5.8,3.2,7.4);
+    camera.lookAt(0,.6,0);
+    const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.shadowMap.enabled=true;
+    sceneRoot.appendChild(renderer.domElement);
+
+    scene.add(new THREE.HemisphereLight(0xd9e8ff,0x232323,2.1));
+    const sun=new THREE.DirectionalLight(0xffe0a0,4.5);
+    sun.position.set(4,7,5);sun.castShadow=true;scene.add(sun);
+
+    const ground=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshStandardMaterial({color:0x222831,roughness:.88,metalness:.1}));
+    ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+
+    const grid=new THREE.GridHelper(30,30,0x4b5563,0x2b3340);grid.position.y=.01;scene.add(grid);
+
+    // stylized showroom / city blocks
+    const buildingMat=new THREE.MeshStandardMaterial({color:0x303847,roughness:.7,metalness:.25});
+    [[-4,1,-3,1.6,2,1.4],[-2.2,1.4,-4,1.3,2.8,1.4],[3.8,1.1,-3.2,1.8,2.2,1.5],[2.2,.8,-4.6,1.2,1.6,1.2]].forEach(b=>{
+      const m=new THREE.Mesh(new THREE.BoxGeometry(b[3],b[4],b[5]),buildingMat);
+      m.position.set(b[0],b[1],b[2]);m.castShadow=true;scene.add(m);
+    });
+
+    const car=new THREE.Group();
+    const bodyMat=new THREE.MeshStandardMaterial({color:0xc28b16,metalness:.85,roughness:.22});
+    const darkMat=new THREE.MeshStandardMaterial({color:0x11151c,metalness:.5,roughness:.28});
+    const glassMat=new THREE.MeshStandardMaterial({color:0x334e68,metalness:.7,roughness:.08,transparent:true,opacity:.82});
+
+    const lower=new THREE.Mesh(new THREE.BoxGeometry(3.6,.55,1.7),bodyMat);lower.position.y=.55;lower.castShadow=true;car.add(lower);
+    const hood=new THREE.Mesh(new THREE.BoxGeometry(1.1,.34,1.62),bodyMat);hood.position.set(1.25,.88,0);hood.rotation.z=-.08;car.add(hood);
+    const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.65,.72,1.45),glassMat);cabin.position.set(-.25,1.05,0);cabin.rotation.z=-.04;car.add(cabin);
+    const trunk=new THREE.Mesh(new THREE.BoxGeometry(.8,.35,1.6),bodyMat);trunk.position.set(-1.45,.82,0);car.add(trunk);
+
+    const wheelGeo=new THREE.CylinderGeometry(.42,.42,.32,28);
+    [[1.15,.42,.88],[1.15,.42,-.88],[-1.15,.42,.88],[-1.15,.42,-.88]].forEach(p=>{
+      const w=new THREE.Mesh(wheelGeo,darkMat);w.rotation.x=Math.PI/2;w.position.set(...p);w.castShadow=true;car.add(w);
+    });
+    car.rotation.y=-.45;scene.add(car);
+
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(2.8,.035,8,100),new THREE.MeshStandardMaterial({color:0xffb800,emissive:0x6b4c00,emissiveIntensity:1.3}));
+    ring.rotation.x=Math.PI/2;ring.position.y=.03;scene.add(ring);
+
+    function resize(){
+      const w=sceneRoot.clientWidth,h=Math.max(260,sceneRoot.clientHeight);
+      renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+    }
+    new ResizeObserver(resize).observe(sceneRoot);resize();
+
+    let raf=0,last=0;
+    const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function animate(t){
+      if(!reduced){car.rotation.y=-.45+Math.sin(t*.00045)*.12;ring.rotation.z=t*.0001;}
+      renderer.render(scene,camera);raf=requestAnimationFrame(animate);
+    }
+    raf=requestAnimationFrame(animate);
+  }catch(e){
+    sceneRoot.innerHTML='<div style="padding:24px;color:#9ca6b8">Aperçu 3D indisponible sur ce navigateur.</div>';
+  }
+}
+</script>
+
+
+<script type="module">
+const API2 = location.hostname==="localhost" ? "http://localhost:3000" : "";
+const W=()=>localStorage.getItem("autoRepCurrentWorld")||"beta";
+async function api2(path,options={}){
+  let r=await fetch(API2+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(API2+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok) r=await fetch(API2+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur serveur");
+  return d;
+}
+const euro=n=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n)||0);
+function typeLabel(t){return ({car:"Voiture",van:"Utilitaire",truck:"Camion",bus:"Autocar",motorcycle:"Moto"}[t]||t);}
+function companyLabel(t){return ({garage:"Garage",dealership:"Concession",rental:"Location",transport:"Transport",parts:"Pièces",manufacturer:"Constructeur",bank_private:"Banque privée",insurance:"Assurance",press:"Presse",law_firm:"Cabinet d'avocats",bailiff_office:"Étude d'huissier"}[t]||t);}
+
+async function renderCompanies(){
+  const d=await api2(`/api/world/${W()}/companies`);
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-2">
+    <div class="card"><h3>Créer une entreprise</h3>
+      <label>Nom</label><input id="coName" value="Auto Services">
+      <label>Activité</label><select id="coType">
+        <option value="garage">Garage</option><option value="dealership">Concession</option>
+        <option value="rental">Location</option><option value="transport">Transport</option>
+        <option value="parts">Pièces détachées</option><option value="manufacturer">Constructeur</option>
+        <option value="bank_private">Banque privée</option><option value="insurance">Assurance</option>
+        <option value="press">Presse</option><option value="law_firm">Cabinet d'avocats</option>
+        <option value="bailiff_office">Étude d'huissier</option>
+      </select>
+      <label>Ville</label><input id="coCity" value="Dijon"><label>Région</label><input id="coRegion" value="Bourgogne-Franche-Comté">
+      <button class="primary" id="createCo" style="margin-top:12px">Créer • 25 000 €</button>
+    </div>
+    <div class="card"><h3>Entreprises du monde</h3>
+      ${d.companies.length?d.companies.map(c=>`<div class="news"><strong>${c.name}</strong><div class="muted">${companyLabel(c.company_type)} • ${c.city} • Réputation ${c.reputation}</div></div>`).join(""):"<p class='muted'>Aucune entreprise.</p>"}
+    </div>
+  </div>`;
+  document.getElementById("createCo").onclick=async()=>{
+    try{
+      await api2(`/api/world/${W()}/companies`,{method:"POST",body:JSON.stringify({
+        name:coName.value,type:coType.value,city:coCity.value,region:coRegion.value
+      })});toast("Entreprise créée.");renderCompanies();
+    }catch(e){toast(e.message);}
+  };
+}
+
+async function renderBankServer(){
+  const d=await api2(`/api/world/${W()}/banks`);
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-3">${d.banks.map(b=>`<div class="card"><h3>🏦 ${b.name}</h3><p class="muted">${b.bank_type} • taux ${(Number(b.base_rate)*100).toFixed(2)} %</p><strong>Capital ${euro(b.capital)}</strong><br><button class="secondary loanBtn" data-id="${b.id}" style="margin-top:10px">Demander un prêt</button></div>`).join("")}</div>
+  <div class="card" style="margin-top:16px"><h3>Mes crédits</h3>${d.loans.length?d.loans.map(l=>`<div class="news"><strong>${l.bank_name}</strong><div class="muted">${euro(l.principal)} • ${l.term_months} mois • ${l.status}</div></div>`).join(""):"<p class='muted'>Aucun crédit.</p>"}</div>`;
+  document.querySelectorAll(".loanBtn").forEach(btn=>btn.onclick=async()=>{
+    const principal=Number(prompt("Montant du crédit :","50000"));
+    if(!Number.isInteger(principal)||principal<1000)return;
+    try{await api2(`/api/world/${W()}/banks/${btn.dataset.id}/loans`,{method:"POST",body:JSON.stringify({principal,termMonths:48,purpose:"Développement automobile"})});toast("Demande envoyée.");renderBankServer();}catch(e){toast(e.message);}
+  });
+}
+
+async function renderPoliticsServer(){
+  const d=await api2(`/api/world/${W()}/politics`);
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-3">${d.entities.map(e=>`<div class="card"><h3>${e.entity_type==="country"?"🇫🇷":e.entity_type==="region"?"🗺️":"🏙️"} ${e.name}</h3><p class="muted">${e.entity_type}</p><strong>${euro(e.treasury)}</strong><div class="muted">Trésorerie publique</div></div>`).join("")}</div>
+  <div class="grid cols-2" style="margin-top:16px">
+    <div class="card"><h3>Proposer une mesure</h3>
+      <label>Territoire</label><select id="polEntity">${d.entities.map(e=>`<option value="${e.id}">${e.name}</option>`).join("")}</select>
+      <label>Type</label><select id="polType"><option value="law">Loi</option><option value="subsidy">Aide</option><option value="tax">Taxe</option><option value="infrastructure">Infrastructure</option><option value="public_contract">Marché public</option></select>
+      <label>Titre</label><input id="polTitle" value="Plan automobile"><label>Description</label><textarea id="polDesc" rows="5">Soutien au développement automobile.</textarea>
+      <label>Budget / montant</label><input id="polAmount" type="number" value="500000">
+      <button class="primary" id="createPolicy" style="margin-top:12px">Proposer</button>
+    </div>
+    <div class="card"><h3>Mesures proposées</h3>${d.policies.map(p=>`<div class="news"><strong>${p.title}</strong><div class="muted">${p.entity_name} • ${p.policy_type} • ${p.status} • ${euro(p.amount)}</div></div>`).join("")||"<p class='muted'>Aucune mesure.</p>"}</div>
+  </div>`;
+  createPolicy.onclick=async()=>{try{await api2(`/api/world/${W()}/politics/policies`,{method:"POST",body:JSON.stringify({entityId:Number(polEntity.value),policyType:polType.value,title:polTitle.value,description:polDesc.value,amount:Number(polAmount.value)})});toast("Mesure proposée.");renderPoliticsServer();}catch(e){toast(e.message);}};
+}
+
+async function renderPressServer(){
+  const d=await api2(`/api/world/${W()}/press/feed`);
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-2">
+    <div class="card"><h3>Fil agence</h3>${d.feed.map(n=>`<div class="news"><div class="time">${new Date(n.created_at).toLocaleString("fr-FR")}</div><strong>${n.headline}</strong><div class="muted">${n.category}</div></div>`).join("")||"<p class='muted'>Aucune dépêche.</p>"}</div>
+    <div class="card"><h3>Articles publiés</h3>${d.articles.map(a=>`<div class="news"><strong>${a.title}</strong><div class="muted">${a.media_name} • ${a.author}</div></div>`).join("")||"<p class='muted'>Aucun article publié.</p>"}
+    <hr style="border-color:var(--line);margin:18px 0"><h3>Créer un média</h3><input id="mediaName" value="Auto News"><select id="mediaScope"><option value="automotive">Automobile</option><option value="economic">Économie</option><option value="local">Local</option><option value="regional">Régional</option><option value="national">National</option></select><button class="primary" id="createMedia" style="margin-top:10px">Créer</button></div>
+  </div>`;
+  createMedia.onclick=async()=>{try{await api2(`/api/world/${W()}/press/media`,{method:"POST",body:JSON.stringify({name:mediaName.value,scope:mediaScope.value})});toast("Média créé.");}catch(e){toast(e.message);}};
+}
+
+async function renderJusticeServer(){
+  const d=await api2(`/api/world/${W()}/justice`);
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-2">
+    <div class="card"><h3>Déposer une affaire</h3><label>Défendeur</label><input id="judDef" placeholder="Pseudo exact">
+      <label>Type</label><select id="judType"><option>Facture impayée</option><option>Rupture de contrat</option><option>Véhicule non conforme</option><option>Litige bancaire</option><option>Marché public</option></select>
+      <label>Montant</label><input id="judAmount" type="number" value="5000"><label>Résumé</label><textarea id="judSummary" rows="5">Description détaillée du litige.</textarea>
+      <button class="primary" id="fileJud" style="margin-top:10px">Saisir le tribunal</button></div>
+    <div class="card"><h3>Mes dossiers</h3>${d.cases.map(c=>`<div class="news"><strong>#${c.id} • ${c.claim_type}</strong><div class="muted">${c.plaintiff} c. ${c.defendant||"?"} • ${euro(c.claim_amount)} • ${c.status}</div></div>`).join("")||"<p class='muted'>Aucun dossier.</p>"}</div>
+  </div>`;
+  fileJud.onclick=async()=>{try{await api2(`/api/world/${W()}/justice/cases`,{method:"POST",body:JSON.stringify({defendantUsername:judDef.value,claimType:judType.value,claimAmount:Number(judAmount.value),summary:judSummary.value})});toast("Affaire enregistrée.");renderJusticeServer();}catch(e){toast(e.message);}};
+}
+
+async function renderEnforcement(){
+  const d=await api2(`/api/world/${W()}/enforcement`);
+  document.getElementById("app").innerHTML=`<div class="card"><h3>🔨 Titres exécutoires et saisies</h3><p class="muted">Les ordres apparaissent ici lorsqu'un jugement devient exécutoire.</p>${d.orders.map(o=>`<div class="news"><strong>Ordre #${o.id}</strong><div class="muted">${o.creditor} ← ${o.debtor} • ${euro(o.amount_recovered)} / ${euro(o.amount_total)} • ${o.status}</div></div>`).join("")||"<p class='muted'>Aucun ordre d'exécution.</p>"}</div>`;
+}
+
+async function renderContracts(){
+  const d=await api2(`/api/world/${W()}/contracts`);
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-2">
+    <div class="card"><h3>Créer un appel d'offres</h3><input id="ctTitle" value="Fourniture de véhicules"><select id="ctType"><option value="vehicle_supply">Fourniture véhicules</option><option value="repair">Réparation</option><option value="transport">Transport</option><option value="rental">Location</option><option value="parts">Pièces</option><option value="insurance">Assurance</option><option value="public_fleet">Flotte publique</option></select><input id="ctBudget" type="number" value="100000"><button class="primary" id="ctCreate" style="margin-top:10px">Publier</button></div>
+    <div class="card"><h3>Contrats ouverts</h3>${d.contracts.map(c=>`<div class="news"><strong>${c.title}</strong><div class="muted">${c.contract_type} • ${euro(c.budget)} • ${c.status}</div></div>`).join("")||"<p class='muted'>Aucun contrat.</p>"}</div>
+  </div>`;
+  ctCreate.onclick=async()=>{try{await api2(`/api/world/${W()}/contracts`,{method:"POST",body:JSON.stringify({title:ctTitle.value,contractType:ctType.value,budget:Number(ctBudget.value)})});toast("Contrat publié.");renderContracts();}catch(e){toast(e.message);}};
+}
+
+const routeMap={companies:renderCompanies,bank:renderBankServer,politics:renderPoliticsServer,press:renderPressServer,justice:renderJusticeServer,contracts:renderContracts,enforcement:renderEnforcement};
+document.querySelectorAll(".nav-btn").forEach(btn=>btn.addEventListener("click",()=>{const fn=routeMap[btn.dataset.page];if(fn)setTimeout(()=>fn().catch(e=>toast(e.message)),0)}));
+</script>
+
+
+<script type="module">
+const ACAPI=location.hostname==="localhost"?"http://localhost:3000":"";
+const ACW=()=>localStorage.getItem("autoRepCurrentWorld")||"beta";
+async function acapi(path,options={}){
+  let r=await fetch(ACAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(ACAPI+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(ACAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur serveur");
+  return d;
+}
+const aceur=n=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n)||0);
+
+async function renderConnectedPolitics(){
+  const d=await acapi(`/api/world/${ACW()}/politics`);
+  const app=document.getElementById("app");
+  app.innerHTML=`
+  <div class="grid cols-2">
+    <div class="card"><h3>Élections</h3>
+      ${d.elections.length?d.elections.map(e=>`<div class="news"><strong>#${e.id} • ${e.entity_name}</strong><div class="muted">${e.office_type} • ${e.status}</div>
+      <button class="secondary cand" data-id="${e.id}">Candidature</button>
+      <button class="secondary vote" data-id="${e.id}">Voter</button></div>`).join(""):"<p class='muted'>Aucune élection.</p>"}
+    </div>
+    <div class="card"><h3>Mesures publiques</h3>
+      ${d.policies.length?d.policies.map(p=>`<div class="news"><strong>${p.title}</strong><div class="muted">${p.entity_name} • ${p.policy_type} • ${p.status} • ${aceur(p.amount)}</div>
+      ${p.status==="proposed"?`<button class="primary activatePol" data-id="${p.id}">Activer si élu</button>`:""}</div>`).join(""):"<p class='muted'>Aucune mesure.</p>"}
+    </div>
+  </div>`;
+  app.querySelectorAll(".cand").forEach(b=>b.onclick=async()=>{const manifesto=prompt("Votre programme :","Développer l'économie automobile locale et soutenir les entreprises.");if(!manifesto)return;try{await acapi(`/api/world/${ACW()}/elections/${b.dataset.id}/candidates`,{method:"POST",body:JSON.stringify({manifesto})});toast("Candidature enregistrée.");}catch(e){toast(e.message);}});
+  app.querySelectorAll(".vote").forEach(b=>b.onclick=async()=>{const id=Number(prompt("ID du candidat :","1"));if(!id)return;try{await acapi(`/api/world/${ACW()}/elections/${b.dataset.id}/vote`,{method:"POST",body:JSON.stringify({candidateUserId:id})});toast("Vote enregistré.");}catch(e){toast(e.message);}});
+  app.querySelectorAll(".activatePol").forEach(b=>b.onclick=async()=>{try{await acapi(`/api/world/${ACW()}/politics/policies/${b.dataset.id}/activate`,{method:"POST"});toast("Mesure activée.");renderConnectedPolitics();}catch(e){toast(e.message);}});
+}
+
+async function renderConnectedContracts(){
+  const d=await acapi(`/api/world/${ACW()}/contracts`);
+  document.getElementById("app").innerHTML=`<div class="card"><h3>Contrats inter-joueurs</h3>${d.contracts.map(c=>`<div class="news"><strong>${c.title}</strong><div class="muted">${c.contract_type} • ${aceur(c.budget)} • ${c.status}</div>${c.status==="open"?`<button class="secondary bidCt" data-id="${c.id}">Faire une offre</button>`:""}</div>`).join("")||"<p class='muted'>Aucun contrat.</p>"}</div>`;
+  document.querySelectorAll(".bidCt").forEach(b=>b.onclick=async()=>{const amount=Number(prompt("Montant de l'offre :","75000"));if(!amount)return;try{await acapi(`/api/world/${ACW()}/contracts/${b.dataset.id}/bids`,{method:"POST",body:JSON.stringify({amount,message:"Proposition commerciale"})});toast("Offre déposée.");}catch(e){toast(e.message);}});
+}
+
+async function renderConnectedJustice(){
+  const d=await acapi(`/api/world/${ACW()}/justice`);
+  document.getElementById("app").innerHTML=`<div class="card"><h3>Justice connectée</h3>${d.cases.map(c=>`<div class="news"><strong>#${c.id} • ${c.claim_type}</strong><div class="muted">${c.plaintiff} c. ${c.defendant||"?"} • ${aceur(c.claim_amount)} • ${c.status}</div></div>`).join("")||"<p class='muted'>Aucun dossier.</p>"}</div>`;
+}
+
+async function renderConnectedEnforcement(){
+  const d=await acapi(`/api/world/${ACW()}/enforcement`);
+  document.getElementById("app").innerHTML=`<div class="card"><h3>Huissier • exécution réelle</h3>${d.orders.map(o=>`<div class="news"><strong>Ordre #${o.id}</strong><div class="muted">${o.creditor} ← ${o.debtor} • ${aceur(o.amount_recovered)} / ${aceur(o.amount_total)} • ${o.status}</div>${o.status!=="completed"?`<button class="primary seize" data-id="${o.id}">Saisie bancaire</button>`:""}</div>`).join("")||"<p class='muted'>Aucun titre exécutoire.</p>"}</div>`;
+  document.querySelectorAll(".seize").forEach(b=>b.onclick=async()=>{try{const r=await acapi(`/api/world/${ACW()}/enforcement/${b.dataset.id}/bank-seizure`,{method:"POST"});toast(`Saisie : ${aceur(r.recovered)}`);renderConnectedEnforcement();}catch(e){toast(e.message);}});
+}
+
+async function renderNotifications(){
+  const d=await acapi("/api/notifications");
+  const existing=document.getElementById("notifPanel");if(existing)existing.remove();
+  const panel=document.createElement("div");panel.id="notifPanel";panel.className="card";panel.style.marginBottom="16px";
+  panel.innerHTML=`<h3>🔔 Notifications</h3>${d.notifications.slice(0,5).map(n=>`<div class="news"><strong>${n.title}</strong><div class="muted">${n.body}</div></div>`).join("")||"<p class='muted'>Aucune notification.</p>"}`;
+  document.getElementById("app").prepend(panel);
+}
+
+document.querySelectorAll('.nav-btn[data-page="politics"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>renderConnectedPolitics().catch(e=>toast(e.message)),20)));
+document.querySelectorAll('.nav-btn[data-page="contracts"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>renderConnectedContracts().catch(e=>toast(e.message)),20)));
+document.querySelectorAll('.nav-btn[data-page="justice"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>renderConnectedJustice().catch(e=>toast(e.message)),20)));
+document.querySelectorAll('.nav-btn[data-page="enforcement"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>renderConnectedEnforcement().catch(e=>toast(e.message)),20)));
+
+const notifBtn=document.createElement("button");
+notifBtn.className="secondary";notifBtn.textContent="🔔 Notifications";
+notifBtn.addEventListener("click",()=>renderNotifications().catch(e=>toast(e.message)));
+document.querySelector(".top-actions")?.prepend(notifBtn);
+</script>
+
+
+<script type="module">
+const RTAPI=location.hostname==="localhost"?"http://localhost:3000":"";
+const RTW=()=>localStorage.getItem("autoRepCurrentWorld")||"beta";
+async function rtapi(path,options={}){
+  let r=await fetch(RTAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(RTAPI+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(RTAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur serveur");
+  return d;
+}
+const rteuro=n=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n)||0);
+
+async function showRoles(){
+  try{
+    const d=await rtapi(`/api/world/${RTW()}/roles/me`);
+    const top=document.querySelector(".top-actions");
+    let el=document.getElementById("roleBadge");
+    if(!el){el=document.createElement("div");el.id="roleBadge";el.className="pill";top?.prepend(el);}
+    el.textContent=d.roles.length?`🎖 ${d.roles.map(r=>r.role).join(", ")}`:"👤 Citoyen";
+  }catch{}
+}
+
+async function renderAuctions(){
+  const d=await rtapi(`/api/world/${RTW()}/auctions`);
+  document.getElementById("app").innerHTML=`
+  <div class="card"><div class="section-title"><h3>Enchères judiciaires</h3><span class="server-badge">● Temps réel</span></div>
+  ${d.auctions.length?d.auctions.map(a=>`<div class="vehicle">
+    <div><strong>${a.make} ${a.model}</strong><span class="muted">${a.year} • ${Number(a.mileage).toLocaleString("fr-FR")} km • état ${a.condition}%</span>
+    <div class="muted">Départ ${rteuro(a.starting_price)} • Meilleure offre ${rteuro(a.highest_bid||0)} ${a.highest_bidder?`par ${a.highest_bidder}`:""}</div></div>
+    <button class="primary bidAuction" data-id="${a.id}" data-min="${Math.max(Number(a.starting_price),Number(a.highest_bid||0)+100)}">Enchérir</button>
+  </div>`).join(""):"<p class='muted'>Aucune enchère judiciaire ouverte.</p>"}</div>`;
+  document.querySelectorAll(".bidAuction").forEach(b=>b.onclick=async()=>{
+    const amount=Number(prompt("Votre enchère :",b.dataset.min));
+    if(!Number.isInteger(amount))return;
+    try{await rtapi(`/api/world/${RTW()}/auctions/${b.dataset.id}/bid`,{method:"POST",body:JSON.stringify({amount})});toast("Enchère enregistrée.");renderAuctions();}catch(e){toast(e.message);}
+  });
+}
+document.querySelectorAll('.nav-btn[data-page="auctions"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>renderAuctions().catch(e=>toast(e.message)),20)));
+
+let socket;
+function connectLive(){
+  try{
+    if(socket)socket.close();
+    const proto=location.protocol==="https:"?"wss":"ws";
+    const host=location.hostname==="localhost"?"localhost:3000":location.host;
+    socket=new WebSocket(`${proto}://${host}/ws?world=${encodeURIComponent(RTW())}`);
+    socket.onmessage=e=>{
+      let m;try{m=JSON.parse(e.data)}catch{return}
+      if(m.type==="auction_bid"){
+        toast(`🔨 Nouvelle enchère : ${rteuro(m.payload.amount)}`);
+        if(document.querySelector('.nav-btn[data-page="auctions"]')?.classList.contains("active"))renderAuctions();
+      }
+      if(m.type==="news") toast(`📰 ${m.payload.headline}`);
+      if(m.type==="daily_tick") toast(`🌙 Jour ${m.payload.day} commencé`);
+      if(m.type==="role_granted") showRoles();
+    };
+    socket.onclose=()=>setTimeout(connectLive,3000);
+  }catch{}
+}
+document.getElementById("worldSelect")?.addEventListener("change",()=>{setTimeout(()=>{showRoles();connectLive();},100)});
+showRoles();connectLive();
+</script>
+
+
+<script type="module">
+const V12API=location.hostname==="localhost"?"http://localhost:3000":"";
+const V12W=()=>localStorage.getItem("autoRepCurrentWorld")||"beta";
+async function v12api(path,options={}){
+  let r=await fetch(V12API+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(V12API+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(V12API+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur serveur");
+  return d;
+}
+const v12eur=n=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n)||0);
+
+async function industryUI(){
+  const d=await v12api(`/api/world/${V12W()}/industry`);
+  document.getElementById("app").innerHTML=`
+    <div class="grid cols-3">
+      <div class="card"><h3>🏭 Usines</h3>${d.factories.map(f=>`<div class="news"><strong>${f.name}</strong><div class="muted">${f.factory_type} • ${f.city} • ${f.capacity_per_day}/jour</div></div>`).join("")||"<p class='muted'>Aucune usine.</p>"}</div>
+      <div class="card"><h3>🚗 Modèles</h3>${d.blueprints.map(b=>`<div class="news"><strong>${b.make} ${b.model}</strong><div class="muted">${b.vehicle_type} • ${b.fuel_type} • ${b.power_hp} ch • ${v12eur(b.target_value)}</div></div>`).join("")||"<p class='muted'>Aucun modèle.</p>"}</div>
+      <div class="card"><h3>⚙️ Pièces</h3>${d.parts.slice(0,12).map(p=>`<div class="news"><strong>${p.name}</strong><div class="muted">${p.category} • ${v12eur(p.base_value)}</div></div>`).join("")}</div>
+    </div>`;
+}
+async function insuranceUI(){
+  const d=await v12api(`/api/world/${V12W()}/insurance`);
+  document.getElementById("app").innerHTML=`<div class="grid cols-2">
+  <div class="card"><h3>🛡️ Offres d'assurance</h3>${d.products.map(p=>`<div class="news"><strong>${p.name}</strong><div class="muted">${p.insurer_name} • ${p.coverage_type} • ${v12eur(p.monthly_premium)}/mois • franchise ${v12eur(p.deductible)}</div></div>`).join("")||"<p class='muted'>Aucune offre.</p>"}</div>
+  <div class="card"><h3>Mes contrats</h3>${d.policies.map(p=>`<div class="news"><strong>${p.product_name}</strong><div class="muted">${p.insurer_name} • ${p.status}</div></div>`).join("")||"<p class='muted'>Aucun contrat.</p>"}</div></div>`;
+}
+async function logisticsUI(){
+  const d=await v12api(`/api/world/${V12W()}/logistics`);
+  document.getElementById("app").innerHTML=`<div class="card"><h3>🚛 Missions logistiques</h3>${d.jobs.map(j=>`<div class="news"><strong>${j.origin_city} → ${j.destination_city}</strong><div class="muted">${j.cargo_type} • quantité ${j.quantity} • ${v12eur(j.offered_price)} • ${j.status}${j.carrier_name?` • ${j.carrier_name}`:""}</div></div>`).join("")||"<p class='muted'>Aucune mission.</p>"}</div>`;
+}
+async function exchangeUI(){
+  const d=await v12api(`/api/world/${V12W()}/exchange`);
+  document.getElementById("app").innerHTML=`<div class="card"><div class="section-title"><h3>📈 Bourse des entreprises</h3><span class="server-badge">● Marché serveur</span></div>
+  ${d.companies.map(c=>`<div class="vehicle"><div><strong>${c.name}</strong><span class="muted">${c.company_type} • Réputation ${c.reputation}</span><div>Action : <strong>${v12eur(c.share_price)}</strong></div></div><button class="primary buyShares" data-id="${c.id}" data-price="${c.share_price}">Acheter</button></div>`).join("")||"<p class='muted'>Aucune société cotée.</p>"}</div>`;
+  document.querySelectorAll(".buyShares").forEach(b=>b.onclick=async()=>{
+    const shares=Number(prompt("Nombre d'actions :","10"));
+    if(!Number.isInteger(shares)||shares<1)return;
+    try{const r=await v12api(`/api/world/${V12W()}/exchange/${b.dataset.id}/buy`,{method:"POST",body:JSON.stringify({shares})});toast(`Achat : ${v12eur(r.total)}`);exchangeUI();}catch(e){toast(e.message);}
+  });
+}
+const v12routes={industry:industryUI,insurance:insuranceUI,logistics:logisticsUI,exchange:exchangeUI};
+document.querySelectorAll(".nav-btn").forEach(b=>b.addEventListener("click",()=>{const fn=v12routes[b.dataset.page];if(fn)setTimeout(()=>fn().catch(e=>toast(e.message)),20)}));
+</script>
+
+
+<script type="module">
+const V14API=location.hostname==="localhost"?"http://localhost:3000":"";
+const V14W=()=>localStorage.getItem("autoRepCurrentWorld")||"beta";
+async function v14api(path,options={}){
+  let r=await fetch(V14API+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(V14API+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(V14API+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur serveur");
+  return d;
+}
+const v14eur=n=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n)||0);
+
+async function materialsUI(){
+  const d=await v14api("/api/economy/materials");
+  document.getElementById("app").innerHTML=`<div class="grid cols-3">${d.materials.map(m=>`<div class="card"><h3>${m.name}</h3><div class="metric">${v14eur(m.current_price)}</div><p class="muted">par ${m.unit} • base ${v14eur(m.base_price)}</p></div>`).join("")}</div>`;
+}
+async function taxesUI(){
+  const d=await v14api(`/api/world/${V14W()}/taxes/me`);
+  document.getElementById("app").innerHTML=`<div class="card"><h3>🧾 Fiscalité des entreprises</h3>${d.taxes.map(t=>`<div class="news"><strong>${t.company_name}</strong><div class="muted">${t.tax_type} • ${t.entity_name||""} • ${v14eur(t.amount)} • ${t.status}</div>${t.status!=="paid"?`<button class="primary payTax" data-id="${t.id}">Payer</button>`:""}</div>`).join("")||"<p class='muted'>Aucune taxe.</p>"}</div>`;
+  document.querySelectorAll(".payTax").forEach(b=>b.onclick=async()=>{try{await v14api(`/api/world/${V14W()}/taxes/${b.dataset.id}/pay`,{method:"POST"});toast("Taxe payée.");taxesUI();}catch(e){toast(e.message);}});
+}
+async function tendersUI(){
+  const d=await v14api(`/api/world/${V14W()}/public-tenders`);
+  document.getElementById("app").innerHTML=`<div class="card"><h3>🏛️ Marchés publics</h3>${d.tenders.map(t=>`<div class="news"><strong>${t.title}</strong><div class="muted">${t.entity_name} • ${t.tender_type} • budget ${v14eur(t.budget)} • ${t.status}${t.winner_company?` • gagné par ${t.winner_company}`:""}</div></div>`).join("")||"<p class='muted'>Aucun marché public.</p>"}</div>`;
+}
+async function economyUI(){
+  const d=await v14api(`/api/world/${V14W()}/territory-economy`);
+  document.getElementById("app").innerHTML=`<div class="grid cols-3">${d.territories.map(t=>`<div class="card"><h3>${t.name}</h3><p class="muted">${t.entity_type}</p><div class="metric">${Number(t.economic_index||100).toFixed(1)}</div><p>Indice économique</p><div class="muted">Emploi ${(Number(t.employment_rate||0)*100).toFixed(1)} % • Demande auto ${Number(t.vehicle_demand_index||100).toFixed(1)} • Industrie ${Number(t.industry_index||100).toFixed(1)}</div></div>`).join("")}</div>`;
+}
+async function bankruptcyUI(){
+  const d=await v14api(`/api/world/${V14W()}/bankruptcies`);
+  document.getElementById("app").innerHTML=`<div class="card"><h3>📉 Faillites et liquidations</h3>${d.bankruptcies.map(b=>`<div class="news"><strong>${b.company_name}</strong><div class="muted">${b.company_type} • ${b.status} • ${b.reason}</div></div>`).join("")||"<p class='muted'>Aucune faillite ouverte.</p>"}</div>`;
+}
+async function payrollUI(){
+  document.getElementById("app").innerHTML=`<div class="card"><h3>👷 Salaires</h3><p class="muted">Les salaires sont maintenant débités automatiquement chaque jour par le serveur. Les impayés dégradent progressivement la solvabilité de l'entreprise et peuvent conduire à une faillite.</p><p>La gestion détaillée se fait entreprise par entreprise via l'API de paie.</p></div>`;
+}
+const v14routes={materials:materialsUI,taxes:taxesUI,tenders:tendersUI,economy:economyUI,bankruptcy:bankruptcyUI,payroll:payrollUI};
+document.querySelectorAll(".nav-btn").forEach(b=>b.addEventListener("click",()=>{const fn=v14routes[b.dataset.page];if(fn)setTimeout(()=>fn().catch(e=>toast(e.message)),20)}));
+</script>
+
+</body>
+</html>

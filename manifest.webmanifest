@@ -1,0 +1,9 @@
+{
+  "name": "Auto République",
+  "short_name": "AutoRep",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "description": "Jeu communautaire automobile, économique et politique."
+}
