@@ -1,3 +1,4 @@
+[GAMEPLAY_FLOWS.md](https://github.com/user-attachments/files/31414961/GAMEPLAY_FLOWS.md)
 # Flux de gameplay v1.0
 
 1. Un joueur crée un garage.
