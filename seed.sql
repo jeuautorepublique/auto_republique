@@ -132,3 +132,24 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO territory_metrics(entity_id)
 SELECT id FROM public_entities
 ON CONFLICT (entity_id) DO NOTHING;
+
+
+INSERT INTO achievements(code,name,description,reward_gold,reward_xp) VALUES
+('ACH_FIRST_CAR','Premières clés','Acheter son premier véhicule',10,100),
+('ACH_FIRST_COMPANY','Patron','Créer sa première entreprise',20,250),
+('ACH_FIRST_SALE','Première vente','Vendre un véhicule à un autre joueur',10,100),
+('ACH_10_VEHICLES','Collectionneur','Posséder 10 véhicules',25,500),
+('ACH_MILLION','Millionnaire','Atteindre 1 000 000 € de patrimoine',50,1000),
+('ACH_ELECTED','Élu du peuple','Remporter une élection',30,600)
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO seasons(world_id,name,starts_at,ends_at,active)
+SELECT w,'Saison 1',NOW(),NOW()+INTERVAL '90 days',TRUE
+FROM (VALUES ('beta'),('world1')) AS x(w)
+WHERE NOT EXISTS (SELECT 1 FROM seasons s WHERE s.world_id=x.w AND s.active=TRUE);
+
+INSERT INTO npc_market_demand(world_id,entity_id,vehicle_type,fuel_type,daily_demand,max_price)
+SELECT pe.world_id,pe.id,'car',NULL,8,35000
+FROM public_entities pe
+WHERE pe.entity_type='city'
+AND NOT EXISTS (SELECT 1 FROM npc_market_demand nd WHERE nd.entity_id=pe.id AND nd.vehicle_type='car');
