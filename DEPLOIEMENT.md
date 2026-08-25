@@ -1,3 +1,4 @@
+[DEPLOIEMENT.md](https://github.com/user-attachments/files/31414937/DEPLOIEMENT.md)
 # Déploiement v0.8
 
 Architecture conseillée :
