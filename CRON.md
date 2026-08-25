@@ -1,3 +1,4 @@
+[CRON.md](https://github.com/user-attachments/files/31414902/CRON.md)
 # Mise à jour automatique à minuit
 
 La route de tick est maintenant protégée par `CRON_SECRET`.
