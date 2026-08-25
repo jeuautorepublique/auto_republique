@@ -1,3 +1,4 @@
+[SECURITY.md](https://github.com/user-attachments/files/31415163/SECURITY.md)
 # Sécurité v1.1
 
 - Sessions HttpOnly
