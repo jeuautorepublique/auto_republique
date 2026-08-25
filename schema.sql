@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS companies (
   owner_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   name VARCHAR(120) NOT NULL,
   company_type VARCHAR(40) NOT NULL CHECK(company_type IN (
-    'garage','dealership','rental','transport','parts','manufacturer','bank_private',
+    'garage','vehicle_inspection','dealership','rental','transport','parts','manufacturer','bank_private',
     'insurance','press','law_firm','bailiff_office'
   )),
   city VARCHAR(80) NOT NULL,
@@ -797,3 +797,553 @@ CREATE TABLE IF NOT EXISTS bankruptcy_cases (
 CREATE INDEX IF NOT EXISTS idx_tax_due ON tax_assessments(status,due_at);
 CREATE INDEX IF NOT EXISTS idx_tenders_world_status ON public_tenders(world_id,status);
 CREATE INDEX IF NOT EXISTS idx_employees_company ON employees(company_id,active);
+
+
+-- === V1.5 BETA READY / SOCIAL / PROGRESSION / ASSURANCE PERSONNALISEE ===
+
+-- Progression
+CREATE TABLE IF NOT EXISTS player_progression (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  world_id VARCHAR(20) NOT NULL,
+  level INTEGER NOT NULL DEFAULT 1 CHECK(level >= 1),
+  xp BIGINT NOT NULL DEFAULT 0 CHECK(xp >= 0),
+  skill_points INTEGER NOT NULL DEFAULT 0 CHECK(skill_points >= 0),
+  title VARCHAR(80) NOT NULL DEFAULT 'Nouveau citoyen',
+  PRIMARY KEY(user_id,world_id)
+);
+
+CREATE TABLE IF NOT EXISTS player_licenses (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  world_id VARCHAR(20) NOT NULL,
+  license_code VARCHAR(50) NOT NULL,
+  unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(user_id,world_id,license_code)
+);
+
+CREATE TABLE IF NOT EXISTS achievements (
+  id BIGSERIAL PRIMARY KEY,
+  code VARCHAR(60) NOT NULL UNIQUE,
+  name VARCHAR(120) NOT NULL,
+  description TEXT NOT NULL,
+  reward_gold BIGINT NOT NULL DEFAULT 0,
+  reward_xp BIGINT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS player_achievements (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  world_id VARCHAR(20) NOT NULL,
+  achievement_id BIGINT NOT NULL REFERENCES achievements(id) ON DELETE CASCADE,
+  unlocked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(user_id,world_id,achievement_id)
+);
+
+-- Tutoriel
+CREATE TABLE IF NOT EXISTS tutorial_progress (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  world_id VARCHAR(20) NOT NULL,
+  step_code VARCHAR(60) NOT NULL,
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
+  completed_at TIMESTAMPTZ,
+  PRIMARY KEY(user_id,world_id,step_code)
+);
+
+-- Social
+CREATE TABLE IF NOT EXISTS friendships (
+  requester_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  addressee_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending'
+    CHECK(status IN ('pending','accepted','blocked')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(requester_user_id,addressee_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS private_messages (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20),
+  sender_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  recipient_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  read_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS alliances (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  founder_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  description TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS alliance_members (
+  alliance_id BIGINT NOT NULL REFERENCES alliances(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role VARCHAR(20) NOT NULL DEFAULT 'member' CHECK(role IN ('founder','officer','member')),
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(alliance_id,user_id)
+);
+
+-- Marché enrichi
+ALTER TABLE market_listings ADD COLUMN IF NOT EXISTS listing_type VARCHAR(20) NOT NULL DEFAULT 'fixed'
+  CHECK(listing_type IN ('fixed','auction','negotiable','private'));
+ALTER TABLE market_listings ADD COLUMN IF NOT EXISTS reserved_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE market_listings ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+ALTER TABLE market_listings ADD COLUMN IF NOT EXISTS minimum_offer BIGINT;
+
+CREATE TABLE IF NOT EXISTS market_offers (
+  id BIGSERIAL PRIMARY KEY,
+  listing_id BIGINT NOT NULL REFERENCES market_listings(id) ON DELETE CASCADE,
+  buyer_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount BIGINT NOT NULL CHECK(amount > 0),
+  message TEXT NOT NULL DEFAULT '',
+  status VARCHAR(20) NOT NULL DEFAULT 'pending'
+    CHECK(status IN ('pending','accepted','rejected','withdrawn')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS market_watchlist (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  listing_id BIGINT NOT NULL REFERENCES market_listings(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(user_id,listing_id)
+);
+
+-- Historique automobile riche
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS plate VARCHAR(20);
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS color VARCHAR(40) NOT NULL DEFAULT 'Noir';
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS trim VARCHAR(80);
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS inspection_due_at TIMESTAMPTZ;
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS accident_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS rarity_score INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS custom_name VARCHAR(80);
+
+CREATE TABLE IF NOT EXISTS vehicle_service_records (
+  id BIGSERIAL PRIMARY KEY,
+  vehicle_id BIGINT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  garage_company_id BIGINT REFERENCES companies(id) ON DELETE SET NULL,
+  mileage INTEGER NOT NULL,
+  service_type VARCHAR(50) NOT NULL,
+  description TEXT NOT NULL,
+  cost BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ASSURANCE PERSONNALISEE ENTRE JOUEURS
+CREATE TABLE IF NOT EXISTS insurance_custom_offers (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  insurer_company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  insurer_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  target_vehicle_id BIGINT REFERENCES vehicles(id) ON DELETE CASCADE,
+  name VARCHAR(120) NOT NULL,
+  coverage JSONB NOT NULL DEFAULT '{}'::jsonb,
+  monthly_premium BIGINT NOT NULL CHECK(monthly_premium > 0),
+  deductible BIGINT NOT NULL DEFAULT 0 CHECK(deductible >= 0),
+  max_payout BIGINT NOT NULL CHECK(max_payout > 0),
+  duration_months INTEGER NOT NULL DEFAULT 12 CHECK(duration_months BETWEEN 1 AND 120),
+  status VARCHAR(20) NOT NULL DEFAULT 'offered'
+    CHECK(status IN ('draft','offered','accepted','rejected','expired','cancelled')),
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS insurance_custom_contracts (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  offer_id BIGINT NOT NULL UNIQUE REFERENCES insurance_custom_offers(id) ON DELETE CASCADE,
+  insurer_company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  insurer_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  holder_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vehicle_id BIGINT REFERENCES vehicles(id) ON DELETE SET NULL,
+  coverage JSONB NOT NULL,
+  monthly_premium BIGINT NOT NULL,
+  deductible BIGINT NOT NULL,
+  max_payout BIGINT NOT NULL,
+  starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ends_at TIMESTAMPTZ NOT NULL,
+  next_payment_at TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '1 month',
+  status VARCHAR(20) NOT NULL DEFAULT 'active'
+    CHECK(status IN ('active','suspended','cancelled','expired'))
+);
+
+-- Événements mondiaux
+CREATE TABLE IF NOT EXISTS world_events (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  event_type VARCHAR(40) NOT NULL CHECK(event_type IN (
+    'oil_shock','battery_shortage','recession','auto_show','tourism_boom',
+    'transport_strike','tax_reform','storm','supply_shortage'
+  )),
+  title VARCHAR(160) NOT NULL,
+  description TEXT NOT NULL,
+  effect_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Saisons / classements
+CREATE TABLE IF NOT EXISTS seasons (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS leaderboard_snapshots (
+  id BIGSERIAL PRIMARY KEY,
+  season_id BIGINT NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+  category VARCHAR(40) NOT NULL,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  company_id BIGINT REFERENCES companies(id) ON DELETE CASCADE,
+  score NUMERIC(20,2) NOT NULL,
+  rank INTEGER NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Personnalisation
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS slogan VARCHAR(160);
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS brand_color VARCHAR(20) DEFAULT '#ffb800';
+
+CREATE TABLE IF NOT EXISTS player_profiles (
+  user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  bio TEXT NOT NULL DEFAULT '',
+  avatar_url TEXT,
+  banner_url TEXT,
+  display_title VARCHAR(80) NOT NULL DEFAULT 'Entrepreneur'
+);
+
+-- Demande PNJ / liquidité contrôlée
+CREATE TABLE IF NOT EXISTS npc_market_demand (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  entity_id BIGINT REFERENCES public_entities(id) ON DELETE CASCADE,
+  vehicle_type VARCHAR(30) NOT NULL,
+  fuel_type VARCHAR(30),
+  daily_demand INTEGER NOT NULL DEFAULT 0,
+  max_price BIGINT NOT NULL DEFAULT 0,
+  active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- Modération
+CREATE TABLE IF NOT EXISTS reports (
+  id BIGSERIAL PRIMARY KEY,
+  reporter_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reported_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  content_type VARCHAR(30),
+  content_id BIGINT,
+  reason VARCHAR(80) NOT NULL,
+  details TEXT NOT NULL DEFAULT '',
+  status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK(status IN ('open','reviewing','resolved','dismissed')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS moderation_actions (
+  id BIGSERIAL PRIMARY KEY,
+  moderator_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action VARCHAR(30) NOT NULL CHECK(action IN ('warning','mute','suspend','ban','unban')),
+  reason TEXT NOT NULL,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_recipient ON private_messages(recipient_user_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_custom_insurance_target ON insurance_custom_offers(target_user_id,status);
+CREATE INDEX IF NOT EXISTS idx_world_events_active ON world_events(world_id,active,starts_at,ends_at);
+
+
+-- === V1.6 PAIEMENTS GOLD REELS ===
+ALTER TABLE payment_events ADD COLUMN IF NOT EXISTS checkout_session_id VARCHAR(180);
+ALTER TABLE payment_events ADD COLUMN IF NOT EXISTS payment_intent_id VARCHAR(180);
+ALTER TABLE payment_events ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'eur';
+
+CREATE TABLE IF NOT EXISTS checkout_sessions (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  gold_product_id BIGINT NOT NULL REFERENCES gold_products(id) ON DELETE CASCADE,
+  provider VARCHAR(30) NOT NULL DEFAULT 'stripe',
+  provider_session_id VARCHAR(180) NOT NULL UNIQUE,
+  amount_cents INTEGER NOT NULL CHECK(amount_cents > 0),
+  currency VARCHAR(10) NOT NULL DEFAULT 'eur',
+  status VARCHAR(20) NOT NULL DEFAULT 'created'
+    CHECK(status IN ('created','paid','expired','cancelled','failed')),
+  checkout_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  paid_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_checkout_user ON checkout_sessions(user_id,created_at DESC);
+
+
+-- === V1.7 PREMIUM ===
+CREATE TABLE IF NOT EXISTS premium_subscriptions (
+  user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  provider VARCHAR(30) NOT NULL DEFAULT 'stripe',
+  provider_customer_id VARCHAR(180),
+  provider_subscription_id VARCHAR(180) UNIQUE,
+  status VARCHAR(30) NOT NULL DEFAULT 'inactive'
+    CHECK(status IN ('inactive','trialing','active','past_due','cancelled','unpaid')),
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS premium_benefit_usage (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  world_id VARCHAR(20),
+  benefit_code VARCHAR(60) NOT NULL,
+  usage_count INTEGER NOT NULL DEFAULT 0,
+  period_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  period_end TIMESTAMPTZ,
+  PRIMARY KEY(user_id,world_id,benefit_code)
+);
+
+CREATE TABLE IF NOT EXISTS premium_rewards (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reward_type VARCHAR(40) NOT NULL,
+  amount BIGINT NOT NULL DEFAULT 0,
+  granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  reference_period VARCHAR(20)
+);
+
+CREATE INDEX IF NOT EXISTS idx_premium_status ON premium_subscriptions(status,current_period_end);
+
+
+-- === V2.0 CONSOLIDATION / ADMIN / SIMULATION / METIERS / TERRITOIRES ===
+
+CREATE TABLE IF NOT EXISTS admin_economy_snapshots (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  total_euros BIGINT NOT NULL DEFAULT 0,
+  total_gold BIGINT NOT NULL DEFAULT 0,
+  users_count INTEGER NOT NULL DEFAULT 0,
+  active_companies INTEGER NOT NULL DEFAULT 0,
+  vehicles_count INTEGER NOT NULL DEFAULT 0,
+  active_loans INTEGER NOT NULL DEFAULT 0,
+  bankruptcies_open INTEGER NOT NULL DEFAULT 0,
+  market_listings INTEGER NOT NULL DEFAULT 0,
+  premium_active INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS simulation_runs (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  requested_days INTEGER NOT NULL CHECK(requested_days IN (30,90,365)),
+  status VARCHAR(20) NOT NULL DEFAULT 'running'
+    CHECK(status IN ('running','completed','failed')),
+  before_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  after_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS territory_infrastructure (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  entity_id BIGINT NOT NULL REFERENCES public_entities(id) ON DELETE CASCADE,
+  infrastructure_type VARCHAR(40) NOT NULL CHECK(infrastructure_type IN (
+    'road','highway','rail_terminal','port','warehouse','industrial_zone',
+    'charging_network','fuel_station','bus_depot','vehicle_inspection_center'
+  )),
+  name VARCHAR(120) NOT NULL,
+  level INTEGER NOT NULL DEFAULT 1 CHECK(level BETWEEN 1 AND 10),
+  capacity INTEGER NOT NULL DEFAULT 100,
+  condition INTEGER NOT NULL DEFAULT 100 CHECK(condition BETWEEN 0 AND 100),
+  operating_cost_daily BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS employment_contracts (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  employee_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  employee_name VARCHAR(100) NOT NULL,
+  role VARCHAR(60) NOT NULL,
+  salary_daily BIGINT NOT NULL CHECK(salary_daily >= 0),
+  contract_type VARCHAR(20) NOT NULL DEFAULT 'permanent'
+    CHECK(contract_type IN ('permanent','fixed_term','freelance')),
+  permissions JSONB NOT NULL DEFAULT '{}'::jsonb,
+  status VARCHAR(20) NOT NULL DEFAULT 'active'
+    CHECK(status IN ('active','suspended','ended')),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ends_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS vehicle_inspections (
+  id BIGSERIAL PRIMARY KEY,
+  vehicle_id BIGINT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  inspector_company_id BIGINT REFERENCES companies(id) ON DELETE SET NULL,
+  result VARCHAR(20) NOT NULL CHECK(result IN ('passed','failed','conditional')),
+  notes TEXT NOT NULL DEFAULT '',
+  mileage INTEGER NOT NULL,
+  valid_until TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS vehicle_incidents (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  vehicle_id BIGINT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  owner_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  incident_type VARCHAR(30) NOT NULL CHECK(incident_type IN (
+    'collision','breakdown','fire','theft','vandalism','weather'
+  )),
+  severity INTEGER NOT NULL CHECK(severity BETWEEN 1 AND 100),
+  estimated_damage BIGINT NOT NULL DEFAULT 0,
+  location_entity_id BIGINT REFERENCES public_entities(id) ON DELETE SET NULL,
+  resolved BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS political_campaigns (
+  id BIGSERIAL PRIMARY KEY,
+  election_id BIGINT NOT NULL REFERENCES elections(id) ON DELETE CASCADE,
+  candidate_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  budget BIGINT NOT NULL DEFAULT 0,
+  spent BIGINT NOT NULL DEFAULT 0,
+  approval_score NUMERIC(6,2) NOT NULL DEFAULT 50.00,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(election_id,candidate_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS polls (
+  id BIGSERIAL PRIMARY KEY,
+  election_id BIGINT NOT NULL REFERENCES elections(id) ON DELETE CASCADE,
+  candidate_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  support_percent NUMERIC(6,2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS appeals (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  case_id BIGINT NOT NULL REFERENCES court_cases(id) ON DELETE CASCADE,
+  appellant_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'filed'
+    CHECK(status IN ('filed','scheduled','heard','decided','dismissed')),
+  appeal_judge_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS moderator_notes (
+  id BIGSERIAL PRIMARY KEY,
+  target_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  moderator_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  note TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS anti_abuse_events (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  world_id VARCHAR(20),
+  event_type VARCHAR(50) NOT NULL,
+  risk_score INTEGER NOT NULL DEFAULT 0,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_snapshots_world ON admin_economy_snapshots(world_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_simulations_world ON simulation_runs(world_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_infra_entity ON territory_infrastructure(entity_id);
+CREATE INDEX IF NOT EXISTS idx_employment_company ON employment_contracts(company_id,status);
+CREATE INDEX IF NOT EXISTS idx_incidents_vehicle ON vehicle_incidents(vehicle_id,created_at DESC);
+
+
+-- === V2.1 MODULE CONTROLE TECHNIQUE ===
+
+CREATE TABLE IF NOT EXISTS inspection_centers (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  company_id BIGINT NOT NULL UNIQUE REFERENCES companies(id) ON DELETE CASCADE,
+  owner_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(120) NOT NULL,
+  city VARCHAR(80) NOT NULL,
+  accreditation_number VARCHAR(60) NOT NULL UNIQUE,
+  inspection_fee BIGINT NOT NULL DEFAULT 8500 CHECK(inspection_fee >= 0),
+  revisit_fee BIGINT NOT NULL DEFAULT 3500 CHECK(revisit_fee >= 0),
+  reputation INTEGER NOT NULL DEFAULT 0,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS inspection_appointments (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  center_id BIGINT NOT NULL REFERENCES inspection_centers(id) ON DELETE CASCADE,
+  vehicle_id BIGINT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  customer_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  appointment_at TIMESTAMPTZ NOT NULL,
+  appointment_type VARCHAR(20) NOT NULL DEFAULT 'standard'
+    CHECK(appointment_type IN ('standard','revisit')),
+  status VARCHAR(20) NOT NULL DEFAULT 'booked'
+    CHECK(status IN ('booked','in_progress','completed','cancelled','no_show')),
+  price BIGINT NOT NULL CHECK(price >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS inspection_defects (
+  id BIGSERIAL PRIMARY KEY,
+  inspection_id BIGINT NOT NULL REFERENCES vehicle_inspections(id) ON DELETE CASCADE,
+  defect_code VARCHAR(40) NOT NULL,
+  category VARCHAR(20) NOT NULL CHECK(category IN ('minor','major','critical')),
+  description TEXT NOT NULL,
+  corrected BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS appointment_id BIGINT REFERENCES inspection_appointments(id) ON DELETE SET NULL;
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS inspection_number VARCHAR(60);
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS revisit_required BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE vehicle_inspections ADD COLUMN IF NOT EXISTS revisit_due_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_ct_centers_world ON inspection_centers(world_id,active);
+CREATE INDEX IF NOT EXISTS idx_ct_appointments_center ON inspection_appointments(center_id,appointment_at);
+CREATE INDEX IF NOT EXISTS idx_ct_vehicle ON vehicle_inspections(vehicle_id,created_at DESC);
+
+
+-- === V2.3 MULTIJOUEUR REEL ===
+CREATE TABLE IF NOT EXISTS world_chat_messages (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL CHECK(world_id IN ('beta','world1')),
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  channel VARCHAR(30) NOT NULL DEFAULT 'general'
+    CHECK(channel IN ('general','trade','politics','press','help')),
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS player_presence (
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  world_id VARCHAR(20) NOT NULL CHECK(world_id IN ('beta','world1')),
+  connected BOOLEAN NOT NULL DEFAULT FALSE,
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY(user_id,world_id)
+);
+
+CREATE TABLE IF NOT EXISTS multiplayer_events (
+  id BIGSERIAL PRIMARY KEY,
+  world_id VARCHAR(20) NOT NULL,
+  event_type VARCHAR(50) NOT NULL,
+  actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_world_chat_recent
+ON world_chat_messages(world_id,channel,created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_presence_world
+ON player_presence(world_id,connected,last_seen_at DESC);
