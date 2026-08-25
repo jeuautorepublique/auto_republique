@@ -128,11 +128,13 @@ dashboard(){
     </div>
   </div>`;
 },
+multiplayer(){return `<div class="card"><h3>Multijoueur</h3><p class="muted">Connexion au monde partagé…</p></div>`;},
 market(){
   return `<div class="card"><div class="section-title"><h3>Marché des véhicules d'occasion</h3><span class="tag">${state.market.length} annonces</span></div>
   <table><thead><tr><th>Véhicule</th><th>Année</th><th>Km</th><th>État</th><th>Prix</th><th></th></tr></thead>
   <tbody>${state.market.map(v=>`<tr><td><strong>${v.name}</strong><br><span class="muted">Annonce #${v.id}</span></td><td>${v.year}</td><td>${v.km.toLocaleString('fr-FR')}</td><td>${v.condition}%</td><td>${money(v.price)}</td><td><button class="primary" onclick="buy(${v.id})">Acheter</button></td></tr>`).join("")}</tbody></table></div>`;
 },
+inspection(){return `<div class="card"><h3>Contrôle technique</h3><p class="muted">Chargement serveur…</p></div>`;},
 garage(){
   return `<div class="grid cols-2">
     <div class="card"><h3>Mes véhicules</h3>${state.vehicles.length?state.vehicles.map(v=>`<div class="vehicle"><div><strong>${v.name}</strong><span class="muted">${v.year} • ${v.km.toLocaleString('fr-FR')} km • ${v.status}</span><div class="progress"><span style="width:${v.condition}%"></span></div><small class="muted">État ${v.condition}% • Valeur ${money(v.value)}</small></div><div><button class="secondary" onclick="repair(${v.id})">Réparer</button> <button class="primary" onclick="sell(${v.id})">Vendre</button></div></div>`).join(""):`<p class="muted">Aucun véhicule.</p>`}</div>
@@ -152,6 +154,14 @@ territory(){
  <tr><td>Fiscalité entreprise</td><td>4,0 %</td><td>2,0 %</td></tr>
  <tr><td>Budget public</td><td>${money(state.publicBudget)}</td><td>${money(18700000)}</td></tr></table></div>`;
 },
+progression(){return `<div class="card"><h3>Progression</h3><p class="muted">Chargement serveur…</p></div>`;},
+social(){return `<div class="card"><h3>Social</h3><p class="muted">Chargement serveur…</p></div>`;},
+insurancecustom(){return `<div class="card"><h3>Contrats assurance</h3><p class="muted">Chargement serveur…</p></div>`;},
+events(){return `<div class="card"><h3>Événements</h3><p class="muted">Chargement serveur…</p></div>`;},
+rankings(){return `<div class="card"><h3>Classements</h3><p class="muted">Chargement serveur…</p></div>`;},
+map2(){return `<div class="card"><h3>Carte du monde</h3><p class="muted">Chargement serveur…</p></div>`;},
+staff2(){return `<div class="card"><h3>Emplois & organigrammes</h3><p class="muted">Chargement serveur…</p></div>`;},
+admin2(){return `<div class="card"><h3>Administration</h3><p class="muted">Le tableau de bord complet est accessible via l'API admin sécurisée.</p></div>`;},
 materials(){return `<div class="card"><h3>Matières premières</h3><p class="muted">Chargement serveur…</p></div>`;},
 payroll(){return `<div class="card"><h3>Salaires</h3><p class="muted">Chargement serveur…</p></div>`;},
 taxes(){return `<div class="card"><h3>Fiscalité</h3><p class="muted">Chargement serveur…</p></div>`;},
@@ -174,6 +184,8 @@ bank(){
  </div>`;
 },
 
+premium(){return `<div class="card"><h3>Premium</h3><p class="muted">Chargement…</p></div>`;},
+realgold(){return `<div class="card"><h3>Acheter des Gold</h3><p class="muted">Chargement de la boutique sécurisée…</p></div>`;},
 shop(){
  return `<div class="hero gold-hero"><div><p class="eyebrow">BOUTIQUE PREMIUM</p><h3>Gold Auto République</h3>
  <p class="muted">Le Gold accélère nettement le développement économique et débloque des services premium. Les élections, jugements et pouvoirs publics restent hors boutique.</p>
