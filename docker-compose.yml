@@ -4,13 +4,36 @@ services:
     environment:
       POSTGRES_DB: auto_republique
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: change_me
     volumes:
       - auto_republique_pg:/var/lib/postgresql/data
       - ./server/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./server/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+
+  api:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm start"
+    volumes:
+      - ./server:/app
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:change_me@db:5432/auto_republique
+      JWT_SECRET: CHANGE_ME_WITH_A_LONG_RANDOM_SECRET
+      CLIENT_ORIGIN: http://localhost:8080
+      COOKIE_SECURE: "false"
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+
+  web:
+    image: nginx:alpine
+    volumes:
+      - ./client:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
 
 volumes:
   auto_republique_pg:
