@@ -37,7 +37,16 @@
       <button class="nav-btn" data-page="tenders">🏛️ Marchés publics</button>
       <button class="nav-btn" data-page="economy">🌍 Économie territoriale</button>
       <button class="nav-btn" data-page="bankruptcy">📉 Faillites</button>
-      <button class="nav-btn" data-page="shop">🪙 Boutique Gold</button>
+      <button class="nav-btn" data-page="map2">🗺️ Carte monde</button>
+      <button class="nav-btn" data-page="staff2">👥 Emplois</button>
+      <button class="nav-btn" data-page="admin2">🛠️ Admin</button>
+      <button class="nav-btn" data-page="progression">🏆 Progression</button>
+      <button class="nav-btn" data-page="social">💬 Social</button>
+      <button class="nav-btn" data-page="insurancecustom">🛡️ Contrats assurance</button>
+      <button class="nav-btn" data-page="events">🌩️ Événements</button>
+      <button class="nav-btn" data-page="rankings">🏅 Classements</button>
+      <button class="nav-btn" data-page="realgold">🪙 Acheter des Gold</button>
+      <button class="nav-btn" data-page="premium">👑 Premium</button>
       <button class="nav-btn" data-page="politics">🏛️ Politique</button>
       <button class="nav-btn" data-page="press">📰 Presse</button>
       <button class="nav-btn" data-page="justice">⚖️ Justice</button>
@@ -320,7 +329,7 @@ async function renderCompanies(){
     <div class="card"><h3>Créer une entreprise</h3>
       <label>Nom</label><input id="coName" value="Auto Services">
       <label>Activité</label><select id="coType">
-        <option value="garage">Garage</option><option value="dealership">Concession</option>
+        <option value="garage">Garage automobile</option><option value="vehicle_inspection">Contrôle technique</option><option value="dealership">Concession</option>
         <option value="rental">Location</option><option value="transport">Transport</option>
         <option value="parts">Pièces détachées</option><option value="manufacturer">Constructeur</option>
         <option value="bank_private">Banque privée</option><option value="insurance">Assurance</option>
@@ -645,6 +654,461 @@ async function payrollUI(){
 }
 const v14routes={materials:materialsUI,taxes:taxesUI,tenders:tendersUI,economy:economyUI,bankruptcy:bankruptcyUI,payroll:payrollUI};
 document.querySelectorAll(".nav-btn").forEach(b=>b.addEventListener("click",()=>{const fn=v14routes[b.dataset.page];if(fn)setTimeout(()=>fn().catch(e=>toast(e.message)),20)}));
+</script>
+
+
+<script type="module">
+const V15API=location.hostname==="localhost"?"http://localhost:3000":"";
+const V15W=()=>localStorage.getItem("autoRepCurrentWorld")||"beta";
+async function v15api(path,options={}){
+  let r=await fetch(V15API+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(V15API+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(V15API+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur serveur");
+  return d;
+}
+const v15eur=n=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n)||0);
+
+async function progressionUI(){
+  const d=await v15api(`/api/world/${V15W()}/progression`);
+  const p=d.progression;
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-3">
+    <div class="card"><div class="label">Niveau</div><div class="metric">${p.level}</div><div class="muted">${p.title}</div></div>
+    <div class="card"><div class="label">XP</div><div class="metric">${p.xp}</div><div class="muted">Progression globale</div></div>
+    <div class="card"><div class="label">Points</div><div class="metric">${p.skill_points}</div><div class="muted">Spécialisations futures</div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>🏆 Succès</h3>
+  ${d.achievements.map(a=>`<div class="news"><strong>${a.unlocked_at?"✅":"⬜"} ${a.name}</strong><div class="muted">${a.description} • ${a.reward_gold} Gold • ${a.reward_xp} XP</div></div>`).join("")}</div>`;
+}
+async function socialUI(){
+  const d=await v15api("/api/social/inbox");
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-2">
+    <div class="card"><h3>💬 Messagerie</h3>
+      <label>Joueur</label><input id="msgUser" placeholder="Pseudo">
+      <label>Message</label><textarea id="msgBody" rows="4" placeholder="Votre message"></textarea>
+      <button class="primary" id="sendMsg" style="margin-top:10px">Envoyer</button>
+    </div>
+    <div class="card"><h3>Boîte de réception</h3>${d.messages.map(m=>`<div class="news"><strong>${m.sender}</strong><div>${m.body}</div><div class="muted">${new Date(m.created_at).toLocaleString("fr-FR")}</div></div>`).join("")||"<p class='muted'>Aucun message.</p>"}</div>
+  </div>`;
+  sendMsg.onclick=async()=>{try{await v15api(`/api/social/messages/${encodeURIComponent(msgUser.value)}`,{method:"POST",body:JSON.stringify({worldId:V15W(),body:msgBody.value})});toast("Message envoyé.");socialUI();}catch(e){toast(e.message);}};
+}
+async function insuranceCustomUI(){
+  const d=await v15api(`/api/world/${V15W()}/insurance/custom/offers`);
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-2">
+    <div class="card"><h3>🛡️ Proposition personnalisée</h3>
+      <p class="muted">Réservé au propriétaire d'une compagnie d'assurance.</p>
+      <label>ID entreprise d'assurance</label><input id="insCo" type="number">
+      <label>Client</label><input id="insTarget" placeholder="Pseudo">
+      <label>ID véhicule (optionnel)</label><input id="insVeh" type="number">
+      <label>Nom du contrat</label><input id="insName" value="Protection Premium">
+      <div class="form-row"><div><label>Prime / mois</label><input id="insPremium" type="number" value="120"></div><div><label>Franchise</label><input id="insDed" type="number" value="500"></div></div>
+      <label>Plafond</label><input id="insMax" type="number" value="30000">
+      <label>Durée (mois)</label><input id="insDur" type="number" value="12">
+      <div class="form-row"><label><input id="covCollision" type="checkbox" checked> Collision</label><label><input id="covTheft" type="checkbox" checked> Vol</label></div>
+      <div class="form-row"><label><input id="covFire" type="checkbox"> Incendie</label><label><input id="covBreak" type="checkbox"> Panne</label></div>
+      <button class="primary" id="sendIns" style="margin-top:10px">Envoyer l'offre</button>
+    </div>
+    <div class="card"><h3>Mes offres</h3>
+      ${d.offers.map(o=>`<div class="news"><strong>${o.name}</strong><div class="muted">${o.insurer_name} • ${v15eur(o.monthly_premium)}/mois • franchise ${v15eur(o.deductible)} • ${o.status}</div>
+      ${o.status==="offered"?`<button class="primary acceptIns" data-id="${o.id}">Accepter</button> <button class="secondary rejectIns" data-id="${o.id}">Refuser</button>`:""}</div>`).join("")||"<p class='muted'>Aucune offre.</p>"}
+    </div>
+  </div>`;
+  sendIns.onclick=async()=>{try{
+    await v15api(`/api/world/${V15W()}/insurance/custom/offers`,{method:"POST",body:JSON.stringify({
+      companyId:Number(insCo.value),targetUsername:insTarget.value,targetVehicleId:insVeh.value?Number(insVeh.value):null,
+      name:insName.value,monthlyPremium:Number(insPremium.value),deductible:Number(insDed.value),maxPayout:Number(insMax.value),
+      durationMonths:Number(insDur.value),coverage:{collision:covCollision.checked,theft:covTheft.checked,fire:covFire.checked,vandalism:false,breakdown:covBreak.checked,glass:false,roadside:false,replacementVehicle:false}
+    })});toast("Offre d'assurance envoyée.");insuranceCustomUI();}catch(e){toast(e.message);}};
+  document.querySelectorAll(".acceptIns").forEach(b=>b.onclick=async()=>{try{await v15api(`/api/world/${V15W()}/insurance/custom/offers/${b.dataset.id}/accept`,{method:"POST"});toast("Contrat signé.");insuranceCustomUI();}catch(e){toast(e.message);}});
+  document.querySelectorAll(".rejectIns").forEach(b=>b.onclick=async()=>{try{await v15api(`/api/world/${V15W()}/insurance/custom/offers/${b.dataset.id}/reject`,{method:"POST"});toast("Offre refusée.");insuranceCustomUI();}catch(e){toast(e.message);}});
+}
+async function eventsUI(){
+  const d=await v15api(`/api/world/${V15W()}/events`);
+  document.getElementById("app").innerHTML=`<div class="card"><h3>🌩️ Événements du monde</h3>${d.events.map(e=>`<div class="news"><strong>${e.title}</strong><div>${e.description}</div><div class="muted">${new Date(e.starts_at).toLocaleDateString("fr-FR")} → ${new Date(e.ends_at).toLocaleDateString("fr-FR")}</div></div>`).join("")||"<p class='muted'>Aucun événement majeur actuellement.</p>"}</div>`;
+}
+async function rankingsUI(){
+  const [wealth,rep]=await Promise.all([v15api(`/api/world/${V15W()}/leaderboard/wealth`),v15api(`/api/world/${V15W()}/leaderboard/reputation`)]);
+  document.getElementById("app").innerHTML=`<div class="grid cols-2">
+  <div class="card"><h3>💰 Fortune</h3>${wealth.ranking.slice(0,20).map(r=>`<div class="news"><strong>#${r.rank} ${r.username}</strong><div class="muted">${v15eur(r.score)}</div></div>`).join("")}</div>
+  <div class="card"><h3>⭐ Réputation</h3>${rep.ranking.slice(0,20).map(r=>`<div class="news"><strong>#${r.rank} ${r.username}</strong><div class="muted">${r.score} points</div></div>`).join("")}</div></div>`;
+}
+const v15routes={progression:progressionUI,social:socialUI,insurancecustom:insuranceCustomUI,events:eventsUI,rankings:rankingsUI};
+document.querySelectorAll(".nav-btn").forEach(b=>b.addEventListener("click",()=>{const fn=v15routes[b.dataset.page];if(fn)setTimeout(()=>fn().catch(e=>toast(e.message)),20)}));
+</script>
+
+
+<script type="module">
+const PAYAPI=location.hostname==="localhost"?"http://localhost:3000":"";
+async function payApi(path,options={}){
+  let r=await fetch(PAYAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(PAYAPI+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(PAYAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur paiement");
+  return d;
+}
+const formatPrice=(c,currency="eur")=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:currency.toUpperCase()}).format(Number(c)/100);
+
+async function realGoldUI(){
+  const [store,history]=await Promise.all([
+    payApi("/api/store/gold/products"),
+    payApi("/api/store/gold/history")
+  ]);
+  const app=document.getElementById("app");
+  app.innerHTML=`
+  <div class="hero gold-hero">
+    <div>
+      <p class="eyebrow">PAIEMENT SÉCURISÉ</p>
+      <h3>Boutique Gold</h3>
+      <p class="muted">Le paiement est effectué sur la page sécurisée Stripe. Les Gold ne sont crédités qu'après confirmation serveur du paiement.</p>
+    </div>
+  </div>
+  <div class="grid cols-3" style="margin-top:16px">
+    ${store.products.map(p=>`<div class="card">
+      <h3>🪙 ${Number(p.gold_amount).toLocaleString("fr-FR")} Gold</h3>
+      <div class="metric">${formatPrice(p.price_cents,store.currency)}</div>
+      <p class="muted">${p.label}</p>
+      <button class="primary buyRealGold" data-code="${p.code}">Acheter avec Stripe</button>
+    </div>`).join("")}
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>Historique des achats</h3>
+    ${history.purchases.length?history.purchases.map(p=>`<div class="news">
+      <strong>${p.label}</strong>
+      <div class="muted">${formatPrice(p.amount_cents,p.currency)} • ${p.status} • ${new Date(p.created_at).toLocaleString("fr-FR")}</div>
+    </div>`).join(""):"<p class='muted'>Aucun achat pour le moment.</p>"}
+  </div>`;
+
+  app.querySelectorAll(".buyRealGold").forEach(btn=>btn.addEventListener("click",async()=>{
+    btn.disabled=true;
+    btn.textContent="Ouverture du paiement…";
+    try{
+      const r=await payApi("/api/store/gold/checkout",{
+        method:"POST",
+        body:JSON.stringify({productCode:btn.dataset.code})
+      });
+      location.href=r.checkoutUrl;
+    }catch(e){
+      btn.disabled=false;
+      btn.textContent="Acheter avec Stripe";
+      toast(e.message);
+    }
+  }));
+}
+
+document.querySelectorAll('.nav-btn[data-page="realgold"]').forEach(b=>
+  b.addEventListener("click",()=>setTimeout(()=>realGoldUI().catch(e=>toast(e.message)),20))
+);
+
+const qs=new URLSearchParams(location.search);
+if(qs.get("gold_payment")==="success"){
+  setTimeout(()=>toast("✅ Paiement confirmé par Stripe. Les Gold apparaîtront dès réception du webhook."),500);
+}
+if(qs.get("gold_payment")==="cancelled"){
+  setTimeout(()=>toast("Paiement annulé. Aucun Gold n'a été débité ou crédité."),500);
+}
+</script>
+
+
+<script type="module">
+const PREMAPI=location.hostname==="localhost"?"http://localhost:3000":"";
+async function premApi(path,options={}){
+  let r=await fetch(PREMAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(PREMAPI+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(PREMAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur Premium");
+  return d;
+}
+const premPrice=(c,curr)=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:String(curr||"eur").toUpperCase()}).format(Number(c)/100);
+
+async function premiumUI(){
+  const d=await premApi("/api/premium/status");
+  const app=document.getElementById("app");
+  app.innerHTML=`
+  <div class="hero premium-hero">
+    <div>
+      <p class="eyebrow">AUTO RÉPUBLIQUE PREMIUM</p>
+      <h3>👑 ${premPrice(d.offer.priceCents,d.offer.currency)} / mois</h3>
+      <p class="muted">${d.premium?"Votre abonnement Premium est actif.":"Accélérez votre gestion et soutenez directement le développement du jeu."}</p>
+      ${d.premium && d.subscription?.current_period_end?`<p>Actif jusqu'au <strong>${new Date(d.subscription.current_period_end).toLocaleDateString("fr-FR")}</strong></p>`:""}
+      <div style="margin-top:14px">
+        ${d.premium
+          ? `<button class="secondary" id="cancelPremium">${d.subscription?.cancel_at_period_end?"Résiliation déjà programmée":"Résilier à la prochaine échéance"}</button>`
+          : `<button class="primary" id="subscribePremium">Devenir Premium • ${premPrice(d.offer.priceCents,d.offer.currency)}</button>`}
+      </div>
+    </div>
+  </div>
+  <div class="grid cols-2" style="margin-top:16px">
+    ${d.benefits.map(x=>`<div class="card"><strong>✓ ${x}</strong></div>`).join("")}
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>Pourquoi Premium ?</h3>
+    <p class="muted">Les abonnements servent à financer l’hébergement, les serveurs, la maintenance et les futures améliorations d’Auto République. Les fonctions politiques, judiciaires et électorales ne peuvent pas être achetées avec Premium.</p>
+  </div>`;
+
+  const sub=document.getElementById("subscribePremium");
+  if(sub)sub.addEventListener("click",async()=>{
+    sub.disabled=true;sub.textContent="Ouverture du paiement…";
+    try{
+      const r=await premApi("/api/premium/checkout",{method:"POST"});
+      location.href=r.checkoutUrl;
+    }catch(e){sub.disabled=false;sub.textContent="Devenir Premium";toast(e.message);}
+  });
+
+  const cancel=document.getElementById("cancelPremium");
+  if(cancel && !d.subscription?.cancel_at_period_end)cancel.addEventListener("click",async()=>{
+    if(!confirm("Résilier Premium à la fin de la période déjà payée ?"))return;
+    try{await premApi("/api/premium/cancel",{method:"POST"});toast("Résiliation programmée.");premiumUI();}catch(e){toast(e.message);}
+  });
+}
+document.querySelectorAll('.nav-btn[data-page="premium"]').forEach(b=>
+  b.addEventListener("click",()=>setTimeout(()=>premiumUI().catch(e=>toast(e.message)),20))
+);
+const premiumQs=new URLSearchParams(location.search);
+if(premiumQs.get("premium")==="success")setTimeout(()=>toast("👑 Abonnement Premium confirmé. Bienvenue !"),500);
+if(premiumQs.get("premium")==="cancelled")setTimeout(()=>toast("Souscription Premium annulée."),500);
+</script>
+
+
+<script type="module">
+const V20API=location.hostname==="localhost"?"http://localhost:3000":"";
+const V20W=()=>localStorage.getItem("autoRepCurrentWorld")||"beta";
+async function v20api(path,options={}){
+  let r=await fetch(V20API+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(V20API+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(V20API+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur serveur");
+  return d;
+}
+
+async function map2UI(){
+  const d=await v20api(`/api/world/${V20W()}/map-data`);
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-3">${d.territories.map(t=>`<div class="card">
+    <h3>${t.entity_type==="country"?"🌍":t.entity_type==="region"?"🗺️":"🏙️"} ${t.name}</h3>
+    <div class="muted">${t.entity_type}</div>
+    <div class="metric">${Number(t.economic_index||100).toFixed(1)}</div>
+    <div class="muted">Économie • emploi ${(Number(t.employment_rate||0)*100).toFixed(1)}%</div>
+  </div>`).join("")}</div>
+  <div class="card" style="margin-top:16px"><h3>Infrastructures</h3>
+  ${d.infrastructure.map(i=>`<div class="news"><strong>${i.name}</strong><div class="muted">${i.territory_name} • ${i.infrastructure_type} • niveau ${i.level}</div></div>`).join("")||"<p class='muted'>Aucune infrastructure.</p>"}</div>`;
+}
+
+async function staff2UI(){
+  document.getElementById("app").innerHTML=`<div class="card"><h3>👥 Emplois & organigrammes</h3>
+  <p>Les entreprises peuvent maintenant employer des joueurs ou des salariés PNJ avec salaire quotidien, type de contrat, rôle et permissions.</p>
+  <p class="muted">Pour afficher un organigramme précis, ouvrez l'entreprise concernée puis utilisez son identifiant avec l'API staff.</p></div>`;
+}
+
+const v20routes={map2:map2UI,staff2:staff2UI};
+document.querySelectorAll(".nav-btn").forEach(b=>b.addEventListener("click",()=>{
+  const fn=v20routes[b.dataset.page];
+  if(fn)setTimeout(()=>fn().catch(e=>toast(e.message)),20);
+}));
+</script>
+
+
+<script type="module">
+const CTAPI=location.hostname==="localhost"?"http://localhost:3000":"";
+const CTW=()=>localStorage.getItem("autoRepCurrentWorld")||"beta";
+async function ctApi(path,options={}){
+  let r=await fetch(CTAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(CTAPI+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(CTAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur serveur");
+  return d;
+}
+const ctEur=n=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n)||0);
+
+async function inspectionUI(){
+  const [centers,garage]=await Promise.all([
+    ctApi(`/api/world/${CTW()}/inspection-centers`),
+    ctApi(`/api/world/${CTW()}/garage`)
+  ]);
+
+  document.getElementById("app").innerHTML=`
+  <div class="grid cols-2">
+    <div class="card">
+      <h3>🧰 Centres de contrôle technique</h3>
+      ${centers.centers.length?centers.centers.map(c=>`<div class="news">
+        <strong>${c.name}</strong>
+        <div class="muted">${c.city} • Agrément ${c.accreditation_number}</div>
+        <div>${ctEur(c.inspection_fee)} • contre-visite ${ctEur(c.revisit_fee)}</div>
+        <button class="primary bookCt" data-id="${c.id}" style="margin-top:8px">Prendre rendez-vous</button>
+      </div>`).join(""):"<p class='muted'>Aucun centre ouvert.</p>"}
+    </div>
+    <div class="card">
+      <h3>🚗 Mes véhicules</h3>
+      ${garage.vehicles.length?garage.vehicles.map(v=>`<div class="news">
+        <strong>${v.make} ${v.model}</strong>
+        <div class="muted">#${v.id} • ${v.year} • ${Number(v.mileage).toLocaleString("fr-FR")} km</div>
+        <button class="secondary checkCt" data-id="${v.id}" style="margin-top:8px">Voir le contrôle</button>
+      </div>`).join(""):"<p class='muted'>Aucun véhicule.</p>"}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>🏢 Ouvrir un centre</h3>
+    <p class="muted">Le contrôle technique est une activité indépendante. Un joueur possédant un garage automobile ne peut pas exploiter un centre de contrôle technique, et inversement.</p>
+    <label>ID de l'entreprise de contrôle technique</label><input id="ctCompanyId" type="number">
+    <label>Nom du centre</label><input id="ctName" value="Auto Contrôle">
+    <div class="form-row">
+      <div><label>Tarif contrôle</label><input id="ctFee" type="number" value="8500"></div>
+      <div><label>Tarif contre-visite</label><input id="ctRevisitFee" type="number" value="3500"></div>
+    </div>
+    <button class="primary" id="createCtCenter" style="margin-top:10px">Demander l'agrément • 50 000 €</button>
+  </div>`;
+
+  document.querySelectorAll(".bookCt").forEach(b=>b.onclick=async()=>{
+    if(!garage.vehicles.length)return toast("Vous n'avez aucun véhicule.");
+    const vehicleId=Number(prompt("ID du véhicule :",String(garage.vehicles[0].id)));
+    if(!vehicleId)return;
+    const d=new Date(Date.now()+24*3600*1000);
+    const appointmentAt=prompt("Date/heure ISO du rendez-vous :",d.toISOString());
+    if(!appointmentAt)return;
+    try{
+      await ctApi(`/api/world/${CTW()}/inspection-centers/${b.dataset.id}/book`,{
+        method:"POST",body:JSON.stringify({vehicleId,appointmentAt,appointmentType:"standard"})
+      });
+      toast("Rendez-vous de contrôle technique réservé.");
+    }catch(e){toast(e.message);}
+  });
+
+  document.querySelectorAll(".checkCt").forEach(b=>b.onclick=async()=>{
+    try{
+      const d=await ctApi(`/api/world/${CTW()}/vehicles/${b.dataset.id}/technical-inspection`);
+      if(!d.inspection)return toast("Aucun contrôle technique enregistré.");
+      const expiry=d.inspection.valid_until?new Date(d.inspection.valid_until).toLocaleDateString("fr-FR"):"contre-visite requise";
+      toast(`${d.valid?"✅ Valide":"❌ Non valide"} • ${d.inspection.result} • ${expiry}`);
+    }catch(e){toast(e.message);}
+  });
+
+  createCtCenter.onclick=async()=>{
+    try{
+      await ctApi(`/api/world/${CTW()}/inspection-centers`,{
+        method:"POST",
+        body:JSON.stringify({
+          companyId:Number(ctCompanyId.value),
+          name:ctName.value,
+          inspectionFee:Number(ctFee.value),
+          revisitFee:Number(ctRevisitFee.value)
+        })
+      });
+      toast("Centre de contrôle technique agréé.");
+      inspectionUI();
+    }catch(e){toast(e.message);}
+  };
+}
+
+document.querySelectorAll('.nav-btn[data-page="inspection"]').forEach(b=>
+  b.addEventListener("click",()=>setTimeout(()=>inspectionUI().catch(e=>toast(e.message)),20))
+);
+</script>
+
+
+<script type="module">
+const MPAPI=location.hostname==="localhost"?"http://localhost:3000":"";
+const MPW=()=>localStorage.getItem("autoRepCurrentWorld")||"beta";
+let mpSocket=null,mpPing=null;
+
+async function mpApi(path,options={}){
+  let r=await fetch(MPAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  if(r.status===401){
+    const rr=await fetch(MPAPI+"/api/auth/refresh",{method:"POST",credentials:"include"});
+    if(rr.ok)r=await fetch(MPAPI+path,{credentials:"include",headers:{"Content-Type":"application/json",...(options.headers||{})},...options});
+  }
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Erreur serveur");
+  return d;
+}
+const mpEur=n=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(n)||0);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+
+async function syncSharedState(){
+  const d=await mpApi(`/api/world/${MPW()}/state`);
+  window.MULTIPLAYER_SERVER_STATE=d;
+  const cash=document.getElementById("cashTop"),gold=document.getElementById("goldTop");
+  if(cash)cash.textContent=mpEur(d.me.euros);
+  if(gold)gold.textContent=d.me.gold;
+  return d;
+}
+
+async function connectSharedWorld(){
+  if(mpSocket){try{mpSocket.close()}catch{}}
+  if(mpPing)clearInterval(mpPing);
+  const t=await mpApi(`/api/world/${MPW()}/realtime-ticket`,{method:"POST"});
+  const proto=location.protocol==="https:"?"wss":"ws";
+  const host=location.hostname==="localhost"?"localhost:3000":location.host;
+  mpSocket=new WebSocket(`${proto}://${host}/ws?ticket=${encodeURIComponent(t.ticket)}`);
+  mpSocket.onopen=()=>{mpPing=setInterval(()=>mpSocket?.readyState===1&&mpSocket.send(JSON.stringify({type:"ping"})),30000);};
+  mpSocket.onmessage=e=>{
+    let m;try{m=JSON.parse(e.data)}catch{return}
+    if(m.type==="world_chat"){
+      if(document.querySelector('.nav-btn[data-page="multiplayer"]')?.classList.contains("active"))renderMultiplayer();
+      else toast(`💬 ${m.payload.username}: ${m.payload.body}`);
+    }
+    if(m.type==="presence_join")toast(`🟢 ${m.payload.username} connecté`);
+    if(m.type==="presence_leave")toast(`⚫ ${m.payload.username} déconnecté`);
+    syncSharedState().catch(()=>{});
+  };
+  mpSocket.onclose=()=>setTimeout(()=>connectSharedWorld().catch(()=>{}),3000);
+}
+
+async function renderMultiplayer(){
+  const [lobby,chat,state]=await Promise.all([
+    mpApi(`/api/world/${MPW()}/lobby`),
+    mpApi(`/api/world/${MPW()}/chat/general`),
+    syncSharedState()
+  ]);
+  document.getElementById("app").innerHTML=`
+    <div class="grid cols-3">
+      <div class="card"><div class="label">En ligne</div><div class="metric">${lobby.stats.online_players}</div><div class="muted">${lobby.stats.registered_players} inscrits</div></div>
+      <div class="card"><div class="label">Entreprises</div><div class="metric">${lobby.stats.companies}</div></div>
+      <div class="card"><div class="label">Marché</div><div class="metric">${lobby.stats.market_listings}</div></div>
+    </div>
+    <div class="grid cols-2" style="margin-top:16px">
+      <div class="card"><h3>🌐 Joueurs connectés</h3>
+        ${lobby.online.map(p=>`<div class="news"><strong>🟢 ${p.username}</strong><div class="muted">${p.city||"?"} • Réputation ${p.reputation||0}</div></div>`).join("")||"<p class='muted'>Aucun autre joueur connecté.</p>"}
+      </div>
+      <div class="card"><h3>💬 Chat général</h3>
+        <div style="max-height:320px;overflow:auto">
+        ${chat.messages.map(m=>`<div class="news"><strong>${m.username}</strong><div>${esc(m.body)}</div><div class="muted">${new Date(m.created_at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div></div>`).join("")}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px"><input id="mpInput" maxlength="1000" style="flex:1"><button class="primary" id="mpSend">Envoyer</button></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px"><h3>🔐 État commun du serveur</h3>
+      <p><strong>${mpEur(state.me.euros)}</strong> • ${state.me.gold} Gold • ${state.garage.length} véhicules • ${state.companies.length} entreprises</p>
+    </div>`;
+  mpSend.onclick=async()=>{
+    const body=mpInput.value.trim();if(!body)return;
+    mpInput.value="";
+    try{await mpApi(`/api/world/${MPW()}/chat/general`,{method:"POST",body:JSON.stringify({body})});}catch(e){toast(e.message);}
+  };
+}
+
+window.AUTO_REPUBLIQUE_MULTIPLAYER=true;
+syncSharedState().catch(()=>{});
+connectSharedWorld().catch(()=>{});
+document.querySelectorAll('.nav-btn[data-page="multiplayer"]').forEach(b=>b.addEventListener("click",()=>setTimeout(()=>renderMultiplayer().catch(e=>toast(e.message)),20)));
+document.getElementById("worldSelect")?.addEventListener("change",()=>setTimeout(()=>{syncSharedState();connectSharedWorld();},100));
 </script>
 
 </body>
